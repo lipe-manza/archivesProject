@@ -2,10 +2,23 @@
 #include <string.h>
 #include <stdbool.h>
 #include <stdlib.h>
+#include "../include/hash_table_pair.h"
+#include "../include/hash_table_single.h"
 
-typedef struct reg
+/*
+typedef struct cabecalho
 {
-    bool removido;
+    bool status; // 0 inconsistente 1 consistente
+    int topo;
+    int proxRRN; // n de registros - 1; byteoffset = 17 + (RRN * 80)
+    int nroEstacoes;
+    int nroParesEstacoes;
+} CAB;
+*/
+
+typedef struct registro
+{
+    bool removido; // 1 para removido e 0 para nao removido
     int proximo;
     int codEstacao;
     int codLinha;
@@ -13,7 +26,7 @@ typedef struct reg
     int distProxEstacao;
     int codLinhaIntegra;
     int codEstIntegra;
-    int tamNomeEstacao; // se for 0 nao escrever o nomeestacao
+    int tamNomeEstacao; // se for 0 nao escrever o nomeEstacao
     char nomeEstacao[41];
     int tamNomeLinha;
     char nomeLinha[41];
@@ -21,7 +34,6 @@ typedef struct reg
 
 void write_in_bin(FILE *p_bin, REG *reg)
 {
-    long start = ftell(p_bin);
 
     fwrite(&reg->removido, sizeof(reg->removido), 1, p_bin);
     fwrite(&reg->proximo, sizeof(reg->proximo), 1, p_bin);
@@ -40,20 +52,32 @@ void write_in_bin(FILE *p_bin, REG *reg)
     if (reg->tamNomeLinha > 0)
         fwrite(reg->nomeLinha, sizeof(char), reg->tamNomeLinha, p_bin);
 
-    long cur = ftell(p_bin);
-
-    long end = start + 80;
     char lixo = '$';
-    while (cur != end)
+    int bytes_usados = 37 + reg->tamNomeEstacao + reg->tamNomeLinha;
+    int lixo_size = 80 - bytes_usados;
+
+    for (int i = 0; i < lixo_size; i++)
     {
-        fwrite(&lixo, sizeof(lixo), 1, p_bin);
-        cur++;
+        fwrite(&lixo, sizeof(char), 1, p_bin);
     }
 }
 
 FILE *csv_to_bin(char *csv_name, char *bin_name)
 
 {
+    // Cria as hashtables para contar as estações e pares de estaçõs únicas
+    HASH_S *hash_single = hash_table_single();
+    HASH_P *hash_pair = hash_table_pair();
+
+    // Encerra o programa em caso de falha de alocação de algum dos if (hash_single == NULL || hash_pair == NULL)
+    if (hash_single == NULL || hash_pair == NULL)
+    {
+        free(hash_single);
+        free(hash_pair);
+        printf("Falha no processamento do arquivo\n");
+        return NULL;
+    }
+
     // Cria a string de caminho onde será aberto o arquivo.csv
     char csv_path[50];
     strcpy(csv_path, "data/");
@@ -66,7 +90,6 @@ FILE *csv_to_bin(char *csv_name, char *bin_name)
         printf("Falha no processamento do arquivo\n");
         return NULL;
     }
-    // ! Definir o registro de cabecalho como instavel
 
     // Cria a string de caminho onde será aberto ou criado o arquivo.bin
     char bin_path[50];
@@ -79,7 +102,12 @@ FILE *csv_to_bin(char *csv_name, char *bin_name)
         printf("Falha no processamento do arquivo\n");
         return NULL;
     }
-    fseek(p_bin, 17, SEEK_SET); // pula 17 bytes para depois ser preenchido pelo cabecalho
+
+    char status = 0;
+    fwrite(&status, sizeof(char), 1, p_bin); // Status inconsistente
+
+    // pula 17 bytes para depois ser preenchido pelo cabecalho
+    fseek(p_bin, 17, SEEK_SET);
 
     // variaveis de ajuda
     char buffer[256];
@@ -101,19 +129,31 @@ FILE *csv_to_bin(char *csv_name, char *bin_name)
         // pega o primeiro campo do csv (CodEstacao) e transforma o numero lido de string para int
         token = strsep(&p, ",");
         if (token == NULL)
-            // BO
+        {
+            printf("Falha no processamento do arquivo.");
             return NULL;
+        }
         reg.codEstacao = atoi(token);
 
         // pega o segundo campo do csv (NomeEstacao) string
         token = strsep(&p, ",");
+        if (token == NULL)
+        {
+            printf("Falha no processamento do arquivo.");
+            return NULL;
+        }
         reg.tamNomeEstacao = strlen(token);
         strcpy(reg.nomeEstacao, token); // pode ser so /0 ai lidar com isso
 
         // CodLinha
         token = strsep(&p, ",");
-        reg.codLinha = atoi(token);
-
+        if (token == NULL)
+        {
+            printf("Falha no processamento do arquivo.");
+            return NULL;
+        }
+        reg.codLinha = (strlen(token) > 0) ? atoi(token) : -1;
+        
         // NomeLinha
         token = strsep(&p, ",");
         reg.tamNomeLinha = strlen(token);
@@ -121,27 +161,81 @@ FILE *csv_to_bin(char *csv_name, char *bin_name)
 
         // CodProxEst
         token = strsep(&p, ",");
-        reg.codProxEstacao = atoi(token);
+        if (token == NULL)
+        {
+            printf("Falha no processamento do arquivo.");
+            return NULL;
+        }
+        reg.codProxEstacao = (strlen(token) > 0) ? atoi(token) : -1;
 
         // DistanciaProxEst
         token = strsep(&p, ",");
-        reg.distProxEstacao = atoi(token);
+        if (token == NULL)
+        {
+            printf("Falha no processamento do arquivo.");
+            return NULL;
+        }
+        reg.distProxEstacao = (strlen(token) > 0) ? atoi(token) : -1;
 
         // CodLinhaInteg
         token = strsep(&p, ",");
-        reg.codLinhaIntegra = atoi(token);
+        if (token == NULL)
+        {
+            printf("Falha no processamento do arquivo.");
+            return NULL;
+        }
+        reg.codLinhaIntegra = (strlen(token) > 0) ? atoi(token) : -1;
 
         // CodEstacaoInteg
         token = strsep(&p, ",");
-        reg.codEstIntegra = atoi(token);
+        if (token == NULL)
+        {
+            printf("Falha no processamento do arquivo.");
+            return NULL;
+        }
+        reg.codEstIntegra = (strlen(token) > 0) ? atoi(token) : -1;
 
-        // ? hash para definir nro estacoes e nro pares estacao
-        //
         write_in_bin(p_bin, &reg);
 
+        // Insere a estação na hash table para contar quantas existem
+        hash_table_single_insert(hash_single, reg.codEstacao);
+        // Insere as estação na hash table para contar quantos pares existem
+        hash_table_pair_insert(hash_pair, reg.codEstacao, reg.codProxEstacao);
+        // conta quantos registros para o RRN
         count_regs++;
-        // Pular 16 bytes para o registro de cabecalho e depois voltar para preencher
     }
 
-    // free()
+    // REGISTRO DE CABECALHO
+    // Aponta para o topo
+    fseek(p_bin, 1, SEEK_SET);
+
+    // Escreve o topo
+    int topo = -1;
+    fwrite(&topo, sizeof(int), 1, p_bin);
+
+    // Escreve o próximo RRN
+    fwrite(&count_regs, sizeof(int), 1, p_bin);
+
+    // Escreve o número de estações únicas
+    int nroEstacoes = hash_table_single_get_count(hash_single);
+    fwrite(&nroEstacoes, sizeof(int), 1, p_bin);
+
+    // Escreve o número de pares únicos de estações
+    int nroParesEstacao = hash_table_pair_get_count(hash_pair);
+    fwrite(&nroParesEstacao, sizeof(int), 1, p_bin);
+
+    // Aponta para o inicio do arquivo
+    fseek(p_bin, 0, SEEK_SET);
+
+    // Define status como consistente
+    status = '1';
+    fwrite(&status, sizeof(char), 1, p_bin);
+
+    // Fecha os arquivos
+    fclose(p_bin);
+    fclose(p_csv);
+
+    // Free nas hashs
+    hash_table_single_free(hash_single);
+    hash_table_pair_free(hash_pair);
 }
