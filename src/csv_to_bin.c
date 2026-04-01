@@ -2,6 +2,7 @@
 #include <string.h>
 #include <stdbool.h>
 #include <stdlib.h>
+#include "../include/csv_to_bin.h"
 #include "../include/hash_table_pair.h"
 #include "../include/hash_table_single.h"
 
@@ -16,7 +17,7 @@ typedef struct cabecalho
 } CAB;
 */
 
-typedef struct registro
+struct registro
 {
     bool removido; // 1 para removido e 0 para nao removido
     int proximo;
@@ -30,7 +31,7 @@ typedef struct registro
     char nomeEstacao[41];
     int tamNomeLinha;
     char nomeLinha[41];
-} REG;
+};
 
 void write_in_bin(FILE *p_bin, REG *reg)
 {
@@ -62,8 +63,7 @@ void write_in_bin(FILE *p_bin, REG *reg)
     }
 }
 
-FILE *csv_to_bin(char *csv_name, char *bin_name)
-
+bool csv_to_bin(char *csv_name, char *bin_name)
 {
     // Cria as hashtables para contar as estações e pares de estaçõs únicas
     HASH_S *hash_single = hash_table_single();
@@ -75,12 +75,12 @@ FILE *csv_to_bin(char *csv_name, char *bin_name)
         free(hash_single);
         free(hash_pair);
         printf("Falha no processamento do arquivo\n");
-        return NULL;
+        return false;
     }
 
     // Cria a string de caminho onde será aberto o arquivo.csv
     char csv_path[50];
-    strcpy(csv_path, "data/");
+    strcpy(csv_path, "../data/");
     strcat(csv_path, csv_name);
 
     // Tenta abrir o arquivo cvs para leitura
@@ -88,19 +88,19 @@ FILE *csv_to_bin(char *csv_name, char *bin_name)
     if (p_csv == NULL)
     {
         printf("Falha no processamento do arquivo\n");
-        return NULL;
+        return false;
     }
 
     // Cria a string de caminho onde será aberto ou criado o arquivo.bin
     char bin_path[50];
-    strcpy(bin_path, "bin/");
+    strcpy(bin_path, "../bin/");
     strcat(bin_path, bin_name);
 
     FILE *p_bin = fopen(bin_path, "wb"); // Tenta criar .bin para escrita binaria
     if (p_bin == NULL)
     {
         printf("Falha no processamento do arquivo\n");
-        return NULL;
+        return false;
     }
 
     char status = 0;
@@ -131,7 +131,7 @@ FILE *csv_to_bin(char *csv_name, char *bin_name)
         if (token == NULL)
         {
             printf("Falha no processamento do arquivo.");
-            return NULL;
+            return false;
         }
         reg.codEstacao = atoi(token);
 
@@ -140,7 +140,7 @@ FILE *csv_to_bin(char *csv_name, char *bin_name)
         if (token == NULL)
         {
             printf("Falha no processamento do arquivo.");
-            return NULL;
+            return false;
         }
         reg.tamNomeEstacao = strlen(token);
         strcpy(reg.nomeEstacao, token); // pode ser so /0 ai lidar com isso
@@ -150,10 +150,10 @@ FILE *csv_to_bin(char *csv_name, char *bin_name)
         if (token == NULL)
         {
             printf("Falha no processamento do arquivo.");
-            return NULL;
+            return false;
         }
         reg.codLinha = (strlen(token) > 0) ? atoi(token) : -1;
-        
+
         // NomeLinha
         token = strsep(&p, ",");
         reg.tamNomeLinha = strlen(token);
@@ -164,7 +164,7 @@ FILE *csv_to_bin(char *csv_name, char *bin_name)
         if (token == NULL)
         {
             printf("Falha no processamento do arquivo.");
-            return NULL;
+            return false;
         }
         reg.codProxEstacao = (strlen(token) > 0) ? atoi(token) : -1;
 
@@ -173,7 +173,7 @@ FILE *csv_to_bin(char *csv_name, char *bin_name)
         if (token == NULL)
         {
             printf("Falha no processamento do arquivo.");
-            return NULL;
+            return false;
         }
         reg.distProxEstacao = (strlen(token) > 0) ? atoi(token) : -1;
 
@@ -182,7 +182,7 @@ FILE *csv_to_bin(char *csv_name, char *bin_name)
         if (token == NULL)
         {
             printf("Falha no processamento do arquivo.");
-            return NULL;
+            return false;
         }
         reg.codLinhaIntegra = (strlen(token) > 0) ? atoi(token) : -1;
 
@@ -191,7 +191,7 @@ FILE *csv_to_bin(char *csv_name, char *bin_name)
         if (token == NULL)
         {
             printf("Falha no processamento do arquivo.");
-            return NULL;
+            return false;
         }
         reg.codEstIntegra = (strlen(token) > 0) ? atoi(token) : -1;
 
@@ -234,8 +234,12 @@ FILE *csv_to_bin(char *csv_name, char *bin_name)
     // Fecha os arquivos
     fclose(p_bin);
     fclose(p_csv);
+    p_bin = NULL;
+    p_csv = NULL;
 
     // Free nas hashs
     hash_table_single_free(hash_single);
     hash_table_pair_free(hash_pair);
+
+    return true;
 }
