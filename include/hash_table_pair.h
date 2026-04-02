@@ -13,7 +13,7 @@ typedef struct hash_table HASH_P;
 
 HASH_P *hash_table_pair();
 void hash_table_pair_insert(HASH_P *hash_table, int e1, int e2);
-void hash_table_pair_free(HASH_P *hash_table);
+void hash_table_pair_free(HASH_P **hash_table);
 int hash_table_pair_get_count(HASH_P *hash);
 
 #endif

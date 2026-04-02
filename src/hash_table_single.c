@@ -83,14 +83,17 @@ void hash_table_single_insert(HASH_S *hash_table, int e1)
 }
 
 // Liberar memoria
-void hash_table_single_free(HASH_S *hash_table)
+void hash_table_single_free(HASH_S **hash_table)
 {
     if (!hash_table)
         return;
 
+    if (!*hash_table)
+        return;
+
     for (int i = 0; i < TABLE_SIZE; i++)
     {
-        ND *aux = hash_table->buckets[i].colisao;
+        ND *aux = (*hash_table)->buckets[i].colisao;
 
         while (aux)
         {
@@ -100,8 +103,9 @@ void hash_table_single_free(HASH_S *hash_table)
         }
     }
 
-    free(hash_table->buckets);
-    free(hash_table);
+    free((*hash_table)->buckets);
+    free(*hash_table);
+    *hash_table = NULL;
 }
 
 int hash_table_single_get_count(HASH_S *hash)

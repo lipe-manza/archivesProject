@@ -9,7 +9,7 @@
 /*
 typedef struct cabecalho
 {
-    bool status; // 0 inconsistente 1 consistente
+    char status; // 0 inconsistente 1 consistente
     int topo;
     int proxRRN; // n de registros - 1; byteoffset = 17 + (RRN * 80)
     int nroEstacoes;
@@ -19,7 +19,7 @@ typedef struct cabecalho
 
 struct registro
 {
-    bool removido; // 1 para removido e 0 para nao removido
+    char removido; // 1 para removido e 0 para nao removido
     int proximo;
     int codEstacao;
     int codLinha;
@@ -32,6 +32,22 @@ struct registro
     int tamNomeLinha;
     char nomeLinha[41];
 };
+
+void close_files(FILE *p_bin, FILE *p_csv)
+{
+    if (p_bin)
+        fclose(p_bin);
+    if (p_csv)
+        fclose(p_csv);
+}
+
+void free_tables(HASH_S *hash_single, HASH_P *hash_pair)
+{
+    if (hash_single)
+        hash_table_single_free(&hash_single);
+    if (hash_pair)
+        hash_table_pair_free(&hash_pair);
+}
 
 void write_in_bin(FILE *p_bin, REG *reg)
 {
@@ -75,35 +91,30 @@ bool csv_to_bin(char *csv_name, char *bin_name)
         free(hash_single);
         free(hash_pair);
         printf("Falha no processamento do arquivo\n");
+        printf("Hash\n");
         return false;
     }
-
-    // Cria a string de caminho onde será aberto o arquivo.csv
-    char csv_path[50];
-    strcpy(csv_path, "../data/");
-    strcat(csv_path, csv_name);
 
     // Tenta abrir o arquivo cvs para leitura
-    FILE *p_csv = fopen(csv_path, "r");
+    FILE *p_csv = fopen(csv_name, "r");
     if (p_csv == NULL)
     {
+        free(hash_single);
+        free(hash_pair);
         printf("Falha no processamento do arquivo\n");
+        printf("fopen csv\n");
         return false;
     }
 
-    // Cria a string de caminho onde será aberto ou criado o arquivo.bin
-    char bin_path[50];
-    strcpy(bin_path, "../bin/");
-    strcat(bin_path, bin_name);
-
-    FILE *p_bin = fopen(bin_path, "wb"); // Tenta criar .bin para escrita binaria
+    FILE *p_bin = fopen(bin_name, "wb"); // Tenta criar .bin para escrita binaria
     if (p_bin == NULL)
     {
         printf("Falha no processamento do arquivo\n");
+        printf("fopen bin\n");
         return false;
     }
 
-    char status = 0;
+    char status = '0';
     fwrite(&status, sizeof(char), 1, p_bin); // Status inconsistente
 
     // pula 17 bytes para depois ser preenchido pelo cabecalho
@@ -123,7 +134,7 @@ bool csv_to_bin(char *csv_name, char *bin_name)
         char *token;
 
         // Inicializa removido e proximo
-        reg.removido = false;
+        reg.removido = '0';
         reg.proximo = -1;
 
         // pega o primeiro campo do csv (CodEstacao) e transforma o numero lido de string para int
@@ -193,6 +204,9 @@ bool csv_to_bin(char *csv_name, char *bin_name)
             printf("Falha no processamento do arquivo.");
             return false;
         }
+
+        // Trunca a ultima string se for vazia tirando o \r e o \n
+        token[strcspn(token, "\r\n")] = '\0';
         reg.codEstIntegra = (strlen(token) > 0) ? atoi(token) : -1;
 
         write_in_bin(p_bin, &reg);
@@ -231,15 +245,11 @@ bool csv_to_bin(char *csv_name, char *bin_name)
     status = '1';
     fwrite(&status, sizeof(char), 1, p_bin);
 
-    // Fecha os arquivos
-    fclose(p_bin);
-    fclose(p_csv);
-    p_bin = NULL;
-    p_csv = NULL;
+    // Fecha os arquivos e da free nos hashs
+    close_files(p_bin, p_csv);
 
-    // Free nas hashs
-    hash_table_single_free(hash_single);
-    hash_table_pair_free(hash_pair);
+    // Desaloca a memória das hash tables
+    free_tables(hash_single, hash_pair);
 
     return true;
 }

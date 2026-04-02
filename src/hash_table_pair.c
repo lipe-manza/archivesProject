@@ -84,14 +84,17 @@ void hash_table_pair_insert(HASH_P *hash_table, int e1, int e2)
 }
 
 // Função para liberar a memória alocada para a tabela hash
-void hash_table_pair_free(HASH_P *hash_table)
+void hash_table_pair_free(HASH_P **hash_table)
 {
     if (!hash_table)
         return;
 
+    if(!*hash_table)
+        return;
+
     for (int i = 0; i < TABLE_SIZE; i++)
     {
-        ND *aux = hash_table->buckets[i].colisao;
+        ND *aux = (*hash_table)->buckets[i].colisao;
 
         while (aux)
         {
@@ -101,8 +104,9 @@ void hash_table_pair_free(HASH_P *hash_table)
         }
     }
 
-    free(hash_table->buckets);
-    free(hash_table);
+    free((*hash_table)->buckets);
+    free(*hash_table);
+    *hash_table = NULL;
 }
 int hash_table_pair_get_count(HASH_P *hash){
     return hash->pairCount;

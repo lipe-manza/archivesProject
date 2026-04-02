@@ -7,7 +7,7 @@
 
 typedef struct registro
 {
-    bool removido; // 1 para removido e 0 para nao removido
+    char removido; // '1' para removido e '0' para nao removido
     int proximo;
     int codEstacao; // Não pode ser nulo
     int codLinha;
@@ -45,13 +45,13 @@ void read_from_bin(FILE *p_bin, REG *reg)
     if (reg->tamNomeLinha > 0)
     {
         fread(reg->nomeLinha, sizeof(char), reg->tamNomeLinha, p_bin);
-        reg->nomeEstacao[reg->tamNomeLinha] = '\0'; // coloca \0 na string
+        reg->nomeLinha[reg->tamNomeLinha] = '\0'; // coloca \0 na string
     }
     else
         reg->nomeLinha[0] = '\0';
 }
 
-bool print_registro_in_terminal(REG *registro)
+void print_registro_in_terminal(REG *registro)
 {
     // Nao podem ser nulos
     printf("%d ", registro->codEstacao);
@@ -98,15 +98,20 @@ bool print_registro_in_terminal(REG *registro)
 
 bool select_from(char *bin_name)
 {
-    // Cria a string de caminho onde será aberto ou criado o arquivo.bin
-    char bin_path[50];
-    strcpy(bin_path, "../bin/");
-    strcat(bin_path, bin_name);
 
-    FILE *p_bin = fopen(bin_path, "rb"); // Tenta criar .bin para escrita binaria
+    FILE *p_bin = fopen(bin_name, "rb"); // Tenta criar .bin para escrita binaria
     if (p_bin == NULL)
     {
         printf("Falha no processamento do arquivo\n");
+        return false;
+    }
+
+    char status;
+    fread(&status, sizeof(char), 1, p_bin);
+    if (status == '0')
+    {
+        printf("Falha no processamento do arquivo.\n");
+        fclose(p_bin);
         return false;
     }
 
@@ -128,7 +133,7 @@ bool select_from(char *bin_name)
         read_from_bin(p_bin, &registro);
 
         // Verifica se o registro está removido , e se estiver não printa
-        if (!registro.removido)
+        if (registro.removido == '0')
             print_registro_in_terminal(&registro);
     }
 
@@ -274,7 +279,7 @@ bool match_gabarito(REG *reg, bool pesquisa[], REG *gabarito)
 
 bool select_from_where(char *bin_name)
 {
-    int m;
+    int m = 0;
     scanf("%d", &m);
     /*codEstacao; codLinha; codProxEstacao; distProxEstacao; codLinhaIntegra;
     codEstIntegra; tamNomeEstacao; nomeEstacao[41]; tamNomeLinha; nomeLinha[41];*/
@@ -306,20 +311,24 @@ bool select_from_where(char *bin_name)
 
         // Lê o valor chave
         ScanQuoteString(str);
-
+        
         //
         set_gabarito(&gabarito, op, str);
     }
 
-    // Cria a string de caminho onde será aberto ou criado o arquivo.bin
-    char bin_path[50];
-    strcpy(bin_path, "../bin/");
-    strcat(bin_path, bin_name);
-
-    FILE *p_bin = fopen(bin_path, "rb"); // Tenta criar .bin para escrita binaria
+    FILE *p_bin = fopen(bin_name, "rb"); // Tenta criar .bin para escrita binaria
     if (p_bin == NULL)
     {
         printf("Falha no processamento do arquivo\n");
+        return false;
+    }
+
+    char status;
+    fread(&status, sizeof(char), 1, p_bin);
+    if (status == '0')
+    {
+        printf("Falha no processamento do arquivo.\n");
+        fclose(p_bin);
         return false;
     }
 
@@ -343,7 +352,7 @@ bool select_from_where(char *bin_name)
         read_from_bin(p_bin, &registro);
 
         // Verifica se o registro está removido , e se estiver não printa
-        if (!registro.removido)
+        if (registro.removido == '0')
         {
             if (match_gabarito(&registro, pesquisa, &gabarito))
             {
