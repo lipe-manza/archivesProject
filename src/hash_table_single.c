@@ -1,24 +1,24 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
-#include "../include/hash_table_single.h"
+#include "../include/hash_tables.h"
 
 // No
-struct node
+struct node_s
 {
     int e1;
-    struct node *next_node;
+    struct node_s *next_node_s;
 };
 
 // Bucket da tabela hash
-struct bucket
+struct bucket_s
 {
-    ND *colisao;
+    ND_S *colisao;
 };
 
-struct hash_table
+struct hash_table_s
 {
-    BU *buckets;
+    BU_S *bucket_s;
     int count; // elementos únicos
 };
 
@@ -31,81 +31,81 @@ unsigned int hash_single(int e1)
 // Construtor
 HASH_S *hash_table_single()
 {
-    HASH_S *hash_table = malloc(sizeof(HASH_S));
+    HASH_S *hash_table_s = malloc(sizeof(HASH_S));
 
-    if (hash_table == NULL)
+    if (hash_table_s == NULL)
         return NULL;
 
-    hash_table->buckets = malloc(TABLE_SIZE * sizeof(BU));
+    hash_table_s->bucket_s = malloc(TABLE_SIZE * sizeof(BU_S));
 
-    if (hash_table->buckets == NULL)
+    if (hash_table_s->bucket_s == NULL)
     {
-        free(hash_table);
+        free(hash_table_s);
         return NULL;
     }
 
     for (int i = 0; i < TABLE_SIZE; i++)
     {
-        hash_table->buckets[i].colisao = NULL;
+        hash_table_s->bucket_s[i].colisao = NULL;
     }
 
-    hash_table->count = 0;
+    hash_table_s->count = 0;
 
-    return hash_table;
+    return hash_table_s;
 }
 
 // Inserção
-void hash_table_single_insert(HASH_S *hash_table, int e1)
+void hash_table_single_insert(HASH_S *hash_table_s, int e1)
 {
-    if (!hash_table)
+    if (!hash_table_s)
         return;
 
     int key = hash_single(e1);
-    ND *p = hash_table->buckets[key].colisao;
+    ND_S *p = hash_table_s->bucket_s[key].colisao;
 
     // verifica duplicado
     while (p != NULL)
     {
         if (p->e1 == e1)
             return;
-        p = p->next_node;
+        p = p->next_node_s;
     }
 
-    ND *new_node = malloc(sizeof(ND));
-    if (!new_node)
+    ND_S *new_node_s = malloc(sizeof(ND_S));
+    if (!new_node_s)
         return;
 
-    new_node->e1 = e1;
-    new_node->next_node = hash_table->buckets[key].colisao;
-    hash_table->buckets[key].colisao = new_node;
+    new_node_s->e1 = e1;
+    new_node_s->next_node_s = hash_table_s->bucket_s[key].colisao;
+    hash_table_s->bucket_s[key].colisao = new_node_s;
 
-    hash_table->count++;
+    hash_table_s->count++;
 }
 
 // Liberar memoria
-void hash_table_single_free(HASH_S **hash_table)
+void hash_table_single_free(HASH_S **hash_table_s)
 {
-    if (!hash_table)
+    if (!hash_table_s)
         return;
 
-    if (!*hash_table)
+    if (!*hash_table_s)
         return;
 
     for (int i = 0; i < TABLE_SIZE; i++)
     {
-        ND *aux = (*hash_table)->buckets[i].colisao;
+        ND_S *aux = (*hash_table_s)->bucket_s[i].colisao;
 
         while (aux)
         {
-            ND *tmp = aux->next_node;
+            ND_S *tmp = aux->next_node_s;
             free(aux);
             aux = tmp;
         }
     }
 
-    free((*hash_table)->buckets);
-    free(*hash_table);
-    *hash_table = NULL;
+    free((*hash_table_s)->bucket_s);
+    free(*hash_table_s);
+    *hash_table_s = NULL;
 }
 
 int hash_table_single_get_count(HASH_S *hash)

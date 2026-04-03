@@ -1,26 +1,26 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
-#include "../include/hash_table_pair.h"
+#include "../include/hash_tables.h"
 
 
 // No colisao
-struct node
+struct node_p
 {
     int e1;
     int e2;
-    struct node *next_node;
+    struct node_p *next_node_p;
 };
 
-// Estrutura do bucket da tabela hash
-struct bucket
+// Estrutura do bucket_p da tabela hash
+struct bucket_p
 {
-    ND *colisao;
+    ND_P *colisao;
 };
 
-struct hash_table
+struct hash_table_p
 {
-    BU *buckets;
+    BU_P *bucket_p;
     int pairCount;
 };
 
@@ -32,81 +32,81 @@ unsigned int hash_pair(int e1, int e2)
 
 HASH_P *hash_table_pair()
 {
-    HASH_P *hash_table = malloc(sizeof(HASH_P));
+    HASH_P *hash_table_p = malloc(sizeof(HASH_P));
 
-    if (hash_table == NULL)
+    if (hash_table_p == NULL)
         return NULL;
 
-    hash_table->buckets = malloc(TABLE_SIZE * sizeof(BU));
+    hash_table_p->bucket_p = malloc(TABLE_SIZE * sizeof(BU_P));
 
-    if (hash_table->buckets == NULL)
+    if (hash_table_p->bucket_p == NULL)
     {
-        free(hash_table);
+        free(hash_table_p);
         return NULL;
     }
 
     for (int i = 0; i < TABLE_SIZE; i++)
     {
-        hash_table->buckets[i].colisao = NULL;
+        hash_table_p->bucket_p[i].colisao = NULL;
     }
 
-    hash_table->pairCount = 0;
+    hash_table_p->pairCount = 0;
 
-    return hash_table;
+    return hash_table_p;
 }
 
-void hash_table_pair_insert(HASH_P *hash_table, int e1, int e2)
+void hash_table_pair_insert(HASH_P *hash_table_p, int e1, int e2)
 {
-    if (!hash_table) return;
+    if (!hash_table_p) return;
 
     int key = hash_pair(e1, e2);
-    ND *p = hash_table->buckets[key].colisao;
+    ND_P *p = hash_table_p->bucket_p[key].colisao;
 
     // verifica par duplicado
     while (p != NULL)
     {
         if (p->e1 == e1 && p->e2 == e2)
             return;
-        p = p->next_node;
+        p = p->next_node_p;
     }
 
-    ND *new_node = malloc(sizeof(ND));
-    if (!new_node) return;
+    ND_P *new_node_p = malloc(sizeof(ND_P));
+    if (!new_node_p) return;
 
-    new_node->e1 = e1;
-    new_node->e2 = e2;
+    new_node_p->e1 = e1;
+    new_node_p->e2 = e2;
 
     // insere no inicio
-    new_node->next_node = hash_table->buckets[key].colisao;
-    hash_table->buckets[key].colisao = new_node;
+    new_node_p->next_node_p = hash_table_p->bucket_p[key].colisao;
+    hash_table_p->bucket_p[key].colisao = new_node_p;
 
-    hash_table->pairCount++;
+    hash_table_p->pairCount++;
 }
 
 // Função para liberar a memória alocada para a tabela hash
-void hash_table_pair_free(HASH_P **hash_table)
+void hash_table_pair_free(HASH_P **hash_table_p)
 {
-    if (!hash_table)
+    if (!hash_table_p)
         return;
 
-    if(!*hash_table)
+    if(!*hash_table_p)
         return;
 
     for (int i = 0; i < TABLE_SIZE; i++)
     {
-        ND *aux = (*hash_table)->buckets[i].colisao;
+        ND_P *aux = (*hash_table_p)->bucket_p[i].colisao;
 
         while (aux)
         {
-            ND *tmp = aux->next_node;
+            ND_P *tmp = aux->next_node_p;
             free(aux);
             aux = tmp;
         }
     }
 
-    free((*hash_table)->buckets);
-    free(*hash_table);
-    *hash_table = NULL;
+    free((*hash_table_p)->bucket_p);
+    free(*hash_table_p);
+    *hash_table_p = NULL;
 }
 int hash_table_pair_get_count(HASH_P *hash){
     return hash->pairCount;

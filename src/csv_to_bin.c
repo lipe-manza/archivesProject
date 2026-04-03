@@ -2,9 +2,9 @@
 #include <string.h>
 #include <stdbool.h>
 #include <stdlib.h>
-#include "../include/csv_to_bin.h"
-#include "../include/hash_table_pair.h"
-#include "../include/hash_table_single.h"
+#include "../include/sql_functions.h"
+#include "../include/hash_tables.h"
+#include "../include/IO.h"
 
 /*
 typedef struct cabecalho
@@ -16,22 +16,6 @@ typedef struct cabecalho
     int nroParesEstacoes;
 } CAB;
 */
-
-struct registro
-{
-    char removido; // 1 para removido e 0 para nao removido
-    int proximo;
-    int codEstacao;
-    int codLinha;
-    int codProxEstacao;
-    int distProxEstacao;
-    int codLinhaIntegra;
-    int codEstIntegra;
-    int tamNomeEstacao; // se for 0 nao escrever o nomeEstacao
-    char nomeEstacao[41];
-    int tamNomeLinha;
-    char nomeLinha[41];
-};
 
 void close_files(FILE *p_bin, FILE *p_csv)
 {
@@ -49,35 +33,6 @@ void free_tables(HASH_S *hash_single, HASH_P *hash_pair)
         hash_table_pair_free(&hash_pair);
 }
 
-void write_in_bin(FILE *p_bin, REG *reg)
-{
-
-    fwrite(&reg->removido, sizeof(reg->removido), 1, p_bin);
-    fwrite(&reg->proximo, sizeof(reg->proximo), 1, p_bin);
-    fwrite(&reg->codEstacao, sizeof(reg->codEstacao), 1, p_bin);
-    fwrite(&reg->codLinha, sizeof(reg->codLinha), 1, p_bin);
-    fwrite(&reg->codProxEstacao, sizeof(reg->codProxEstacao), 1, p_bin);
-    fwrite(&reg->distProxEstacao, sizeof(reg->distProxEstacao), 1, p_bin);
-    fwrite(&reg->codLinhaIntegra, sizeof(reg->codLinhaIntegra), 1, p_bin);
-    fwrite(&reg->codEstIntegra, sizeof(reg->codEstIntegra), 1, p_bin);
-
-    fwrite(&reg->tamNomeEstacao, sizeof(reg->tamNomeEstacao), 1, p_bin);
-    if (reg->tamNomeEstacao > 0)
-        fwrite(reg->nomeEstacao, sizeof(char), reg->tamNomeEstacao, p_bin);
-
-    fwrite(&reg->tamNomeLinha, sizeof(reg->tamNomeLinha), 1, p_bin);
-    if (reg->tamNomeLinha > 0)
-        fwrite(reg->nomeLinha, sizeof(char), reg->tamNomeLinha, p_bin);
-
-    char lixo = '$';
-    int bytes_usados = 37 + reg->tamNomeEstacao + reg->tamNomeLinha;
-    int lixo_size = 80 - bytes_usados;
-
-    for (int i = 0; i < lixo_size; i++)
-    {
-        fwrite(&lixo, sizeof(char), 1, p_bin);
-    }
-}
 
 bool csv_to_bin(char *csv_name, char *bin_name)
 {
@@ -122,7 +77,7 @@ bool csv_to_bin(char *csv_name, char *bin_name)
 
     // variaveis de ajuda
     char buffer[256];
-    REG reg;
+    REG reg ;
     int count_regs = 0;
 
     // Pula a primeira linha
@@ -204,12 +159,14 @@ bool csv_to_bin(char *csv_name, char *bin_name)
             printf("Falha no processamento do arquivo.");
             return false;
         }
-
         // Trunca a ultima string se for vazia tirando o \r e o \n
         token[strcspn(token, "\r\n")] = '\0';
         reg.codEstIntegra = (strlen(token) > 0) ? atoi(token) : -1;
 
+
+        // Escreve o registro no binário
         write_in_bin(p_bin, &reg);
+
 
         // Insere a estação na hash table para contar quantas existem
         hash_table_single_insert(hash_single, reg.codEstacao);

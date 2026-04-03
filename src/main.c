@@ -1,7 +1,6 @@
-#include "../include/csv_to_bin.h"
-#include "../include/fornecidas.h"
-#include "../include/read_bin.h"
 #include <stdio.h>
+#include "../include/sql_functions.h"
+#include "../include/IO.h"
 
 int main() {
   int n = 0;
