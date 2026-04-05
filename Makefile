@@ -57,4 +57,4 @@ debug: all
 .PHONY: all run debug clean
 
 clean:
-	rm -rf $(OBJ_DIR)/*.o $(TARGET)
+	rm -rf $(OBJ_DIR)/*.o $(TARGET) data/estacoes.bin

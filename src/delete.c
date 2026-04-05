@@ -1,67 +1,11 @@
-#include <stdio.h>
-#include <string.h>
 #include <stdbool.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include "../include/sql_functions.h"
-#include "../include/IO.h"
 #include "../include/filtro.h"
+#include "../include/IO.h"
 
-
-bool select_from(char *bin_name)
-{
-
-    FILE *p_bin = fopen(bin_name, "rb"); // Tenta criar .bin para escrita binaria
-    if (p_bin == NULL)
-    {
-        printf("Falha no processamento do arquivo\n");
-        return false;
-    }
-
-    char status;
-    fread(&status, sizeof(char), 1, p_bin);
-    if (status == '0')
-    {
-        printf("Falha no processamento do arquivo.\n");
-        fclose(p_bin);
-        return false;
-    }
-
-    // Vai para o 5 byte do cabecalho (proxRRN) para pegar quantos registros existem
-    fseek(p_bin, 5, SEEK_SET);
-    int count_regs = 0;
-
-    fread(&count_regs, sizeof(int), 1, p_bin);
-
-    // Struct registro auxiliar para ler o binario
-    REG registro;
-
-    // For que passa por todos os registros gravados no arquivo .bin
-    for (int RRN = 0; RRN < count_regs; RRN++)
-    {
-        // Vai para o primeiro byteoffset do registro de RRN x
-        fseek(p_bin, RRN * 80 + 17, SEEK_SET);
-
-        read_from_bin(p_bin, &registro);
-
-        // Verifica se o registro está removido , e se estiver não printa
-        if (registro.removido == '0')
-            print_registro_in_terminal(&registro);
-    }
-
-    if (count_regs == 0)
-    {
-        printf("Registro inexistente.\n");
-    }
-
-    // Fecha os arquivos
-    fclose(p_bin);
-    p_bin = NULL;
-
-    return true;
-}
-
-
-bool select_from_where(char *bin_name)
+bool delete_from_where(char *bin_name)
 {
     int m = 0;
     scanf(" %d", &m);
@@ -99,26 +43,11 @@ bool select_from_where(char *bin_name)
         // Le o valor do campo a ser pesquisado e coloca no str
         ScanQuoteString(str);
 
-        // if (op == 7 || op == 9) // strings
-        // {
-        //     ScanQuoteString(str);
-        // }
-        // else
-        // {
-        //     char temp[10] = "";
-        //     scanf("%s", temp);
-
-        //     if (strcmp(temp, "NULO") == 0)
-        //         str[0] = '\0';
-        //     else
-        //         strcpy(str, temp);
-        // }
-
         // Coloca no registro filtro o que os valores nos campos que vão ser buscados
         set_filtro(&filtro, op, str);
     }
 
-    FILE *p_bin = fopen(bin_name, "rb"); // Tenta criar .bin para escrita binaria
+    FILE *p_bin = fopen(bin_name, "rb+"); // Abre o arquivo para leitura e escrita em modo binário
     if (p_bin == NULL)
     {
         printf("Falha no processamento do arquivo\n");
@@ -134,6 +63,9 @@ bool select_from_where(char *bin_name)
         return false;
     }
 
+    status = '0';
+    fwrite(&status, sizeof(char), 1, p_bin);
+
     // Vai para o 5 byte do cabecalho (proxRRN) para pegar quantos registros existem
     fseek(p_bin, 5, SEEK_SET);
     int count_regs = 0;
@@ -142,8 +74,6 @@ bool select_from_where(char *bin_name)
 
     // Struct registro auxiliar para ler o binario
     REG registro;
-
-    bool encontrou = false;
 
     // For que passa por todos os registros gravados no arquivo .bin
     for (int RRN = 0; RRN < count_regs; RRN++)
@@ -158,18 +88,31 @@ bool select_from_where(char *bin_name)
         {
             if (match_filtro(&registro, pesquisa, &filtro))
             {
-                print_registro_in_terminal(&registro);
-                encontrou = true;
+                // Remoção lógica
+                int topo = -1;
+                char removido = '1';
+
+                // Lê o topo da pilha de registros removidos indicado
+                fseek(p_bin, 1, SEEK_SET);
+                fread(&topo, sizeof(int), 1, p_bin);
+
+                // Define o registro atual como removido
+                fseek(p_bin, RRN * 80 + 17, SEEK_SET);
+                fwrite(&removido, sizeof(char), 1, p_bin);
+
+                // Atribui ao campo próximo do registro o valor anterior do topo da pilha de registros removidos
+                fwrite(&topo, sizeof(int), 1, p_bin);
+
+                // Define o topo da pilha como o RRN do último registro removido
+                fseek(p_bin, 1, SEEK_SET);
+                fwrite(&RRN, sizeof(int), 1, p_bin);
             }
         }
     }
 
-    if (count_regs == 0 || !encontrou)
-    {
-        printf("Registro inexistente.\n");
-    }
-
-    printf("\n");
+    // Define o arquivo binário como consistente no registro de cabeçalho
+    status = '1';
+    fwrite(&status, sizeof(char), 1, p_bin);
 
     // Fecha os arquivos
     fclose(p_bin);

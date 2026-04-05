@@ -3,12 +3,11 @@
 #include <stdbool.h>
 #include "../include/filtro.h"
 
-
 int field_to_index(char *str)
 {
-    char *fields[] = {"codEstacao", "codLinha", "codProxEstacao", "distProxEstacao", "codLinhaIntegra", "codEstIntegra", "tamNomeEstacao", "nomeEstacao", "tamNomeLinha", "nomeLinha"};
+    char *fields[] = {"codEstacao", "codLinha", "codProxEstacao", "distProxEstacao", "codLinhaIntegra", "codEstIntegra", "nomeEstacao", "nomeLinha"};
 
-    for (int i = 0; i < SEARCHABLE_FIELDS; i++)
+    for (int i = 0; i < PUBLIC_FIELDS; i++)
     {
         if (strcmp(str, fields[i]) == 0)
             return i;
@@ -40,26 +39,19 @@ void set_filtro(REG *filtro, int op, char *str)
         filtro->codEstIntegra = (strlen(str) == 0) ? -1 : atoi(str);
         break;
     case 6:
-        filtro->tamNomeEstacao = (strlen(str) == 0) ? -1 : atoi(str);
-        break;
-    case 7:
+        filtro->tamNomeEstacao = strlen(str);
         strcpy(filtro->nomeEstacao, str);
         break;
-    case 8:
-        filtro->tamNomeLinha = (strlen(str) == 0) ? -1 : atoi(str);
-        break;
-    case 9:
+    case 7:
+        filtro->tamNomeLinha = strlen(str);
         strcpy(filtro->nomeLinha, str);
-        break;
-    case 10:
-        // se existir outro campo, segue o padrão
         break;
     }
 }
 
 bool match_filtro(REG *reg, bool pesquisa[], REG *filtro)
 {
-    for (int i = 0; i < SEARCHABLE_FIELDS; i++)
+    for (int i = 0; i < PUBLIC_FIELDS; i++)
     {
         if (!pesquisa[i])
             continue;
@@ -91,18 +83,10 @@ bool match_filtro(REG *reg, bool pesquisa[], REG *filtro)
                 return false;
             break;
         case 6:
-            if (reg->tamNomeEstacao != filtro->tamNomeEstacao)
-                return false;
-            break;
-        case 7:
             if (strcmp(reg->nomeEstacao, filtro->nomeEstacao) != 0)
                 return false;
             break;
-        case 8:
-            if (reg->tamNomeLinha != filtro->tamNomeLinha)
-                return false;
-            break;
-        case 9:
+        case 7:
             if (strcmp(reg->nomeLinha, filtro->nomeLinha) != 0)
                 return false;
             break;

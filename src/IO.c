@@ -6,65 +6,6 @@
 #include "../include/IO.h"
 
 
-void read_from_bin(FILE *p_bin, REG *reg)
-{
-    fread(&reg->removido, sizeof(reg->removido), 1, p_bin);
-    fread(&reg->proximo, sizeof(reg->proximo), 1, p_bin);
-    fread(&reg->codEstacao, sizeof(reg->codEstacao), 1, p_bin);
-    fread(&reg->codLinha, sizeof(reg->codLinha), 1, p_bin);
-    fread(&reg->codProxEstacao, sizeof(reg->codProxEstacao), 1, p_bin);
-    fread(&reg->distProxEstacao, sizeof(reg->distProxEstacao), 1, p_bin);
-    fread(&reg->codLinhaIntegra, sizeof(reg->codLinhaIntegra), 1, p_bin);
-    fread(&reg->codEstIntegra, sizeof(reg->codEstIntegra), 1, p_bin);
-
-    fread(&reg->tamNomeEstacao, sizeof(reg->tamNomeEstacao), 1, p_bin);
-    if (reg->tamNomeEstacao > 0)
-    {
-        fread(reg->nomeEstacao, sizeof(char), reg->tamNomeEstacao, p_bin);
-        reg->nomeEstacao[reg->tamNomeEstacao] = '\0'; // coloca \0 na string
-    }
-    else
-        reg->nomeEstacao[0] = '\0';
-
-    fread(&reg->tamNomeLinha, sizeof(reg->tamNomeLinha), 1, p_bin);
-    if (reg->tamNomeLinha > 0)
-    {
-        fread(reg->nomeLinha, sizeof(char), reg->tamNomeLinha, p_bin);
-        reg->nomeLinha[reg->tamNomeLinha] = '\0'; // coloca \0 na string
-    }
-    else
-        reg->nomeLinha[0] = '\0';
-}
-
-void write_in_bin(FILE *p_bin, REG *reg)
-{
-
-    fwrite(&reg->removido, sizeof(reg->removido), 1, p_bin);
-    fwrite(&reg->proximo, sizeof(reg->proximo), 1, p_bin);
-    fwrite(&reg->codEstacao, sizeof(reg->codEstacao), 1, p_bin);
-    fwrite(&reg->codLinha, sizeof(reg->codLinha), 1, p_bin);
-    fwrite(&reg->codProxEstacao, sizeof(reg->codProxEstacao), 1, p_bin);
-    fwrite(&reg->distProxEstacao, sizeof(reg->distProxEstacao), 1, p_bin);
-    fwrite(&reg->codLinhaIntegra, sizeof(reg->codLinhaIntegra), 1, p_bin);
-    fwrite(&reg->codEstIntegra, sizeof(reg->codEstIntegra), 1, p_bin);
-
-    fwrite(&reg->tamNomeEstacao, sizeof(reg->tamNomeEstacao), 1, p_bin);
-    if (reg->tamNomeEstacao > 0)
-        fwrite(reg->nomeEstacao, sizeof(char), reg->tamNomeEstacao, p_bin);
-
-    fwrite(&reg->tamNomeLinha, sizeof(reg->tamNomeLinha), 1, p_bin);
-    if (reg->tamNomeLinha > 0)
-        fwrite(reg->nomeLinha, sizeof(char), reg->tamNomeLinha, p_bin);
-
-    char lixo = '$';
-    int bytes_usados = 37 + reg->tamNomeEstacao + reg->tamNomeLinha;
-    int lixo_size = 80 - bytes_usados;
-
-    for (int i = 0; i < lixo_size; i++)
-    {
-        fwrite(&lixo, sizeof(char), 1, p_bin);
-    }
-}
 
 void print_registro_in_terminal(REG *registro)
 {
