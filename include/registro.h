@@ -17,9 +17,9 @@ typedef struct registro
     int codLinhaIntegra;
     int codEstIntegra;
     int tamNomeEstacao;   // Se for 0 não escrever o nomeEstacao
-    char nomeEstacao[41]; // Não pode ser nulo
+    char nomeEstacao[51]; // Não pode ser nulo
     int tamNomeLinha;
-    char nomeLinha[41];
+    char nomeLinha[51];
 } REG;
 
 
@@ -27,5 +27,6 @@ typedef struct registro
 void read_from_bin(FILE *p_bin, REG *reg);
 void write_in_bin(FILE *p_bin, REG *reg);
 void atualizar_registro(REG *atualizado, bool atualizar[], int RRN, FILE *p_bin);
+bool atualizar_estacoes(FILE *p_bin);
 
 #endif

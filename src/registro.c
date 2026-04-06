@@ -3,7 +3,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include "../include/registro.h"
-
+#include "../include/hash_tables.h"
 
 void read_from_bin(FILE *p_bin, REG *reg)
 {
@@ -64,8 +64,6 @@ void write_in_bin(FILE *p_bin, REG *reg)
         fwrite(&lixo, sizeof(char), 1, p_bin);
     }
 }
-
-
 
 void atualizar_registro(REG *atualizado, bool atualizar[], int RRN, FILE *p_bin)
 {
@@ -172,8 +170,8 @@ void atualizar_registro(REG *atualizado, bool atualizar[], int RRN, FILE *p_bin)
             fseek(p_bin, RRN * 80 + 17 + 29, SEEK_SET);
             fread(&tamNomeEstacao, sizeof(int), 1, p_bin);
 
-            // Atualiza os campos do nome da linha
             fseek(p_bin, RRN * 80 + 17 + 33 + tamNomeEstacao, SEEK_SET);
+            fwrite(&atualizado->tamNomeLinha, sizeof(int), 1, p_bin);
             if (atualizado->tamNomeLinha > 0)
                 fwrite(atualizado->nomeLinha, sizeof(char), atualizado->tamNomeLinha, p_bin);
 
@@ -191,4 +189,78 @@ void atualizar_registro(REG *atualizado, bool atualizar[], int RRN, FILE *p_bin)
         }
         }
     }
+}
+
+bool atualizar_estacoes(FILE *p_bin)
+{
+    // Cria as hashtables para contar as estações e pares de estaçõs únicas
+    HASH_S *hash_single = hash_table_single();
+    HASH_P *hash_pair = hash_table_pair();
+
+    // Encerra o programa em caso de falha de alocação de algum dos if (hash_single == NULL || hash_pair == NULL)
+    if (hash_single == NULL || hash_pair == NULL)
+    {
+        free(hash_single);
+        free(hash_pair);
+        printf("Falha no processamento do arquivo\n");
+        printf("Hash\n");
+        return false;
+    }
+
+    // Aponta para o proxRRN
+    fseek(p_bin, 5, SEEK_SET);
+    int RRN;
+    // Le o valor do proximo RRN
+    fread(&RRN, sizeof(int), 1, p_bin);
+
+    // Loop para ler o arquivo binário inteiro e atualizar na hash o numero de estacoes e pares de estacoes
+    for (int i = 0; i < RRN; i++)
+    {
+        char removido = '0';
+        fseek(p_bin, i * 80 + 17, SEEK_SET);
+        fread(&removido, sizeof(char), 1, p_bin);
+
+        if (removido == '1')
+            continue;
+
+        int tamNomeEstacao = 0;
+        // Aponta para o tamNomeEstacao
+        fseek(p_bin, i * 80 + 17 + 29, SEEK_SET);
+        // Le o tamNomeEstacao e armazena
+        fread(&tamNomeEstacao, sizeof(int), 1, p_bin);
+
+        // Como o nomeEstacao nunca é nulo não precisa de verificação
+        char nomeEstacao[41];
+        fread(nomeEstacao, sizeof(char), tamNomeEstacao, p_bin);
+
+        hash_table_single_insert(hash_single, nomeEstacao);
+
+        int codEstacao = -1;
+        // Aponta para o codEstacao
+        fseek(p_bin, i * 80 + 17 + 5, SEEK_SET);
+        // Le o codEstacao e armazena
+        fread(&codEstacao, sizeof(int), 1, p_bin);
+
+        int codProxEstacao = -1;
+        // Aponta para o codProxEstacao
+        fseek(p_bin, i * 80 + 17 + 13, SEEK_SET);
+        // Le o codProxEstacao e armazena
+        fread(&codProxEstacao, sizeof(int), 1, p_bin);
+        // Insere a dupla na hash_table_pair
+        hash_table_pair_insert(hash_pair, codEstacao, codProxEstacao);
+    }
+
+    int nroEstacoes = hash_table_single_get_count(hash_single);
+    int nroParesEstacao = hash_table_pair_get_count(hash_pair);
+    // Aponta para nroEstacoes
+    fseek(p_bin, 9, SEEK_SET);
+    // Escreve no arquivo o numero de estacoes e o numero de pares de estacoes
+    fwrite(&nroEstacoes, sizeof(int), 1, p_bin);
+    fwrite(&nroParesEstacao, sizeof(int), 1, p_bin);
+
+    // Da free nas tables
+    hash_table_single_free(&hash_single);
+    hash_table_pair_free(&hash_pair);
+
+    return true;
 }

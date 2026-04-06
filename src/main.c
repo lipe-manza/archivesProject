@@ -10,7 +10,6 @@ int main()
     scanf("%d", &n);
 
     char bin_name[50] = "data/";
-
     switch (n)
     {
     case 1: // Create table
@@ -65,7 +64,7 @@ int main()
     }
     case 5: // INSERT INTO
     {
-        
+
         break;
     }
     case 6: // UPDATE SET WHERE

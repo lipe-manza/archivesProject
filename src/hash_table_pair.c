@@ -3,7 +3,6 @@
 #include <stdbool.h>
 #include "../include/hash_tables.h"
 
-
 // No colisao
 struct node_p
 {
@@ -27,7 +26,9 @@ struct hash_table_p
 // Função hash
 unsigned int hash_pair(int e1, int e2)
 {
-    return (e1 * 1000 + e2) % TABLE_SIZE;
+    int minn = e1 < e2 ? e1 : e2;
+    int maxx = e1 > e2 ? e1 : e2;
+    return (minn * 1000 + maxx) % TABLE_SIZE;
 }
 
 HASH_P *hash_table_pair()
@@ -57,21 +58,28 @@ HASH_P *hash_table_pair()
 
 void hash_table_pair_insert(HASH_P *hash_table_p, int e1, int e2)
 {
-    if (!hash_table_p) return;
+    if (!hash_table_p)
+        return;
 
     int key = hash_pair(e1, e2);
+    printf("Fez hash pair\n");
     ND_P *p = hash_table_p->bucket_p[key].colisao;
+    printf("Declarou p\n");
 
     // verifica par duplicado
     while (p != NULL)
     {
-        if (p->e1 == e1 && p->e2 == e2)
+        printf("p = %p\n", p);
+        printf("p->e1 = %d\n", p->e1);
+        printf("p->e2 = %d\n", p->e2);
+        if ((p->e1 == e1 && p->e2 == e2) || (p->e1 == e2 && p->e2 == e1))
             return;
         p = p->next_node_p;
     }
 
     ND_P *new_node_p = malloc(sizeof(ND_P));
-    if (!new_node_p) return;
+    if (!new_node_p)
+        return;
 
     new_node_p->e1 = e1;
     new_node_p->e2 = e2;
@@ -89,7 +97,7 @@ void hash_table_pair_free(HASH_P **hash_table_p)
     if (!hash_table_p)
         return;
 
-    if(!*hash_table_p)
+    if (!*hash_table_p)
         return;
 
     for (int i = 0; i < TABLE_SIZE; i++)
@@ -108,6 +116,7 @@ void hash_table_pair_free(HASH_P **hash_table_p)
     free(*hash_table_p);
     *hash_table_p = NULL;
 }
-int hash_table_pair_get_count(HASH_P *hash){
+int hash_table_pair_get_count(HASH_P *hash)
+{
     return hash->pairCount;
 }

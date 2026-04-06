@@ -80,38 +80,42 @@ bool delete_from_where(char *bin_name)
     {
         // Vai para o primeiro byteoffset do registro de RRN x
         fseek(p_bin, RRN * 80 + 17, SEEK_SET);
-
         read_from_bin(p_bin, &registro);
 
         // Verifica se o registro está removido , e se estiver não printa
-        if (registro.removido == '0')
+        if (registro.removido == '1')
+            continue;
+
+        if (match_filtro(&registro, pesquisa, &filtro))
         {
-            if (match_filtro(&registro, pesquisa, &filtro))
-            {
-                // Remoção lógica
-                int topo = -1;
-                char removido = '1';
+            printf("Removendo o %d registro\n", RRN);
+            // Remoção lógica
+            int topo = -1;
+            char removido = '1';
 
-                // Lê o topo da pilha de registros removidos indicado
-                fseek(p_bin, 1, SEEK_SET);
-                fread(&topo, sizeof(int), 1, p_bin);
+            // Lê o topo da pilha de registros removidos indicado
+            fseek(p_bin, 1, SEEK_SET);
+            fread(&topo, sizeof(int), 1, p_bin);
 
-                // Define o registro atual como removido
-                fseek(p_bin, RRN * 80 + 17, SEEK_SET);
-                fwrite(&removido, sizeof(char), 1, p_bin);
+            // Define o registro atual como removido
+            fseek(p_bin, RRN * 80 + 17, SEEK_SET);
+            fwrite(&removido, sizeof(char), 1, p_bin);
 
-                // Atribui ao campo próximo do registro o valor anterior do topo da pilha de registros removidos
-                fwrite(&topo, sizeof(int), 1, p_bin);
+            // Atribui ao campo próximo do registro o valor anterior do topo da pilha de registros removidos
+            fwrite(&topo, sizeof(int), 1, p_bin);
 
-                // Define o topo da pilha como o RRN do último registro removido
-                fseek(p_bin, 1, SEEK_SET);
-                fwrite(&RRN, sizeof(int), 1, p_bin);
-            }
+            // Define o topo da pilha como o RRN do último registro removido
+            fseek(p_bin, 1, SEEK_SET);
+            fwrite(&RRN, sizeof(int), 1, p_bin);
         }
     }
 
+    // Atualiza  o numero de estacoes e de pares de estacoes
+    atualizar_estacoes(p_bin);
+
     // Define o arquivo binário como consistente no registro de cabeçalho
     status = '1';
+    fseek(p_bin, 0, SEEK_SET);
     fwrite(&status, sizeof(char), 1, p_bin);
 
     // Fecha os arquivos

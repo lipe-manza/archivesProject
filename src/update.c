@@ -62,7 +62,7 @@ bool update_set_where(char *bin_name)
     for (int i = 0; i < PUBLIC_FIELDS; i++)
         atualizar[i] = 0;
 
-    for (int i = 0; i < m; i++)
+    for (int i = 0; i < p; i++)
     {
         // le o campo que quer em um buffer
         char field[41];

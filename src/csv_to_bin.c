@@ -33,7 +33,6 @@ void free_tables(HASH_S *hash_single, HASH_P *hash_pair)
         hash_table_pair_free(&hash_pair);
 }
 
-
 bool csv_to_bin(char *csv_name, char *bin_name)
 {
     // Cria as hashtables para contar as estações e pares de estaçõs únicas
@@ -77,7 +76,7 @@ bool csv_to_bin(char *csv_name, char *bin_name)
 
     // variaveis de ajuda
     char buffer[256];
-    REG reg ;
+    REG reg;
     int count_regs = 0;
 
     // Pula a primeira linha
@@ -85,6 +84,8 @@ bool csv_to_bin(char *csv_name, char *bin_name)
 
     while (fgets(buffer, sizeof(buffer), p_csv) != NULL)
     {
+        buffer[strcspn(buffer, "\r\n")] = '\0';  
+
         char *p = buffer;
         char *token;
 
@@ -109,7 +110,7 @@ bool csv_to_bin(char *csv_name, char *bin_name)
             return false;
         }
         reg.tamNomeEstacao = strlen(token);
-        strcpy(reg.nomeEstacao, token); // pode ser so /0 ai lidar com isso
+        strcpy(reg.nomeEstacao, token);
 
         // CodLinha
         token = strsep(&p, ",");
@@ -122,8 +123,16 @@ bool csv_to_bin(char *csv_name, char *bin_name)
 
         // NomeLinha
         token = strsep(&p, ",");
-        reg.tamNomeLinha = strlen(token);
-        strcpy(reg.nomeLinha, token);
+        if (token == NULL)
+        {
+            reg.tamNomeLinha = 0;
+            reg.nomeLinha[0] = '\0';
+        }
+        else
+        {
+            reg.tamNomeLinha = strlen(token);
+            strcpy(reg.nomeLinha, token);
+        }
 
         // CodProxEst
         token = strsep(&p, ",");
@@ -163,13 +172,13 @@ bool csv_to_bin(char *csv_name, char *bin_name)
         token[strcspn(token, "\r\n")] = '\0';
         reg.codEstIntegra = (strlen(token) > 0) ? atoi(token) : -1;
 
-
         // Escreve o registro no binário
         write_in_bin(p_bin, &reg);
 
-
+        printf("%s\n", reg.nomeEstacao);
         // Insere a estação na hash table para contar quantas existem
-        hash_table_single_insert(hash_single, reg.codEstacao);
+        hash_table_single_insert(hash_single, reg.nomeEstacao);
+        printf("Fez hash single\n");
         // Insere as estação na hash table para contar quantos pares existem
         hash_table_pair_insert(hash_pair, reg.codEstacao, reg.codProxEstacao);
         // conta quantos registros para o RRN
