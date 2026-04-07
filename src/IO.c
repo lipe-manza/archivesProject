@@ -146,3 +146,44 @@ void ScanQuoteString(char *str)
     }
 }
 
+void read_new_registro_from_terminal(REG *new_registro)
+{
+    char str[40];
+
+    // Le o codEstacao
+    ScanQuoteString(str);
+    new_registro->codEstacao = strlen(str) > 0 ? atoi(str) : -1;
+
+    // Le o codEstacao
+    ScanQuoteString(str);
+    new_registro->tamNomeEstacao = strlen(str);
+    strcpy(new_registro->nomeEstacao, str);
+
+    // Le o codLinha
+    ScanQuoteString(str);
+    new_registro->codLinha = strlen(str) > 0 ? atoi(str) : -1;
+
+    // Le o nomeLinha
+    ScanQuoteString(str);
+    new_registro->tamNomeLinha = strlen(str);
+    strcpy(new_registro->nomeLinha, str);
+
+    // Le o codProxEstacao
+    ScanQuoteString(str);
+    new_registro->codProxEstacao = strlen(str) > 0 ? atoi(str) : -1;
+
+    // Le o distProxEstacao
+    ScanQuoteString(str);
+    new_registro->distProxEstacao = strlen(str) > 0 ? atoi(str) : -1;
+
+    // Le o codLinhaIntegra
+    ScanQuoteString(str);
+    new_registro->codLinhaIntegra = strlen(str) > 0 ? atoi(str) : -1;
+
+    // Le o codEstIntegra
+    ScanQuoteString(str);
+    new_registro->codEstIntegra = strlen(str) > 0 ? atoi(str) : -1;
+
+    return;
+}
+

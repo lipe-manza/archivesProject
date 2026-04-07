@@ -25,19 +25,19 @@ void close_files(FILE *p_bin, FILE *p_csv)
         fclose(p_csv);
 }
 
-void free_tables(HASH_S *hash_single, HASH_P *hash_pair)
+void free_tables(HashEstacao *hash_single, HashPar *hash_pair)
 {
     if (hash_single)
-        hash_table_single_free(&hash_single);
+        destruir_hash_est(hash_single);
     if (hash_pair)
-        hash_table_pair_free(&hash_pair);
+        destruir_hash_par(hash_pair);
 }
 
 bool csv_to_bin(char *csv_name, char *bin_name)
 {
     // Cria as hashtables para contar as estações e pares de estaçõs únicas
-    HASH_S *hash_single = hash_table_single();
-    HASH_P *hash_pair = hash_table_pair();
+    HashEstacao *hash_single = criar_hash_est();
+    HashPar *hash_pair = criar_hash_par();
 
     // Encerra o programa em caso de falha de alocação de algum dos if (hash_single == NULL || hash_pair == NULL)
     if (hash_single == NULL || hash_pair == NULL)
@@ -84,7 +84,7 @@ bool csv_to_bin(char *csv_name, char *bin_name)
 
     while (fgets(buffer, sizeof(buffer), p_csv) != NULL)
     {
-        buffer[strcspn(buffer, "\r\n")] = '\0';  
+        buffer[strcspn(buffer, "\r\n")] = '\0';
 
         char *p = buffer;
         char *token;
@@ -175,12 +175,15 @@ bool csv_to_bin(char *csv_name, char *bin_name)
         // Escreve o registro no binário
         write_in_bin(p_bin, &reg);
 
-        printf("%s\n", reg.nomeEstacao);
+        char str_nomeEstacao[41];
+        strcpy(str_nomeEstacao, reg.nomeEstacao);
+        int codEstacao = reg.codEstacao;
+        int codProxEstacao = reg.codProxEstacao;
+
         // Insere a estação na hash table para contar quantas existem
-        hash_table_single_insert(hash_single, reg.nomeEstacao);
-        printf("Fez hash single\n");
+        inserir_est(hash_single, str_nomeEstacao);
         // Insere as estação na hash table para contar quantos pares existem
-        hash_table_pair_insert(hash_pair, reg.codEstacao, reg.codProxEstacao);
+        inserir_par(hash_pair, codEstacao, codProxEstacao);
         // conta quantos registros para o RRN
         count_regs++;
     }
@@ -197,11 +200,11 @@ bool csv_to_bin(char *csv_name, char *bin_name)
     fwrite(&count_regs, sizeof(int), 1, p_bin);
 
     // Escreve o número de estações únicas
-    int nroEstacoes = hash_table_single_get_count(hash_single);
+    int nroEstacoes = get_nro_estacoes(hash_single);
     fwrite(&nroEstacoes, sizeof(int), 1, p_bin);
 
     // Escreve o número de pares únicos de estações
-    int nroParesEstacao = hash_table_pair_get_count(hash_pair);
+    int nroParesEstacao = get_nro_pares(hash_pair);
     fwrite(&nroParesEstacao, sizeof(int), 1, p_bin);
 
     // Aponta para o inicio do arquivo

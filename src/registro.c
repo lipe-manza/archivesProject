@@ -194,8 +194,8 @@ void atualizar_registro(REG *atualizado, bool atualizar[], int RRN, FILE *p_bin)
 bool atualizar_estacoes(FILE *p_bin)
 {
     // Cria as hashtables para contar as estações e pares de estaçõs únicas
-    HASH_S *hash_single = hash_table_single();
-    HASH_P *hash_pair = hash_table_pair();
+    HashEstacao *hash_single = criar_hash_est();
+    HashPar *hash_pair = criar_hash_par();
 
     // Encerra o programa em caso de falha de alocação de algum dos if (hash_single == NULL || hash_pair == NULL)
     if (hash_single == NULL || hash_pair == NULL)
@@ -233,7 +233,7 @@ bool atualizar_estacoes(FILE *p_bin)
         char nomeEstacao[41];
         fread(nomeEstacao, sizeof(char), tamNomeEstacao, p_bin);
 
-        hash_table_single_insert(hash_single, nomeEstacao);
+        inserir_est(hash_single, nomeEstacao);
 
         int codEstacao = -1;
         // Aponta para o codEstacao
@@ -247,20 +247,21 @@ bool atualizar_estacoes(FILE *p_bin)
         // Le o codProxEstacao e armazena
         fread(&codProxEstacao, sizeof(int), 1, p_bin);
         // Insere a dupla na hash_table_pair
-        hash_table_pair_insert(hash_pair, codEstacao, codProxEstacao);
+        inserir_par(hash_pair, codEstacao, codProxEstacao);
     }
 
-    int nroEstacoes = hash_table_single_get_count(hash_single);
-    int nroParesEstacao = hash_table_pair_get_count(hash_pair);
+    int nroEstacoes = get_nro_estacoes(hash_single);
+    int nroParesEstacao = get_nro_pares(hash_pair);
     // Aponta para nroEstacoes
     fseek(p_bin, 9, SEEK_SET);
     // Escreve no arquivo o numero de estacoes e o numero de pares de estacoes
     fwrite(&nroEstacoes, sizeof(int), 1, p_bin);
     fwrite(&nroParesEstacao, sizeof(int), 1, p_bin);
 
-    // Da free nas tables
-    hash_table_single_free(&hash_single);
-    hash_table_pair_free(&hash_pair);
+    // Dar free nas hashtables
+    destruir_hash_est(hash_single);
+    destruir_hash_par(hash_pair);
+
 
     return true;
 }
