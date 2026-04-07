@@ -7,28 +7,28 @@
 
 void read_from_bin(FILE *p_bin, REG *reg)
 {
-    fread(&reg->removido, sizeof(reg->removido), 1, p_bin);
-    fread(&reg->proximo, sizeof(reg->proximo), 1, p_bin);
-    fread(&reg->codEstacao, sizeof(reg->codEstacao), 1, p_bin);
-    fread(&reg->codLinha, sizeof(reg->codLinha), 1, p_bin);
-    fread(&reg->codProxEstacao, sizeof(reg->codProxEstacao), 1, p_bin);
-    fread(&reg->distProxEstacao, sizeof(reg->distProxEstacao), 1, p_bin);
-    fread(&reg->codLinhaIntegra, sizeof(reg->codLinhaIntegra), 1, p_bin);
-    fread(&reg->codEstIntegra, sizeof(reg->codEstIntegra), 1, p_bin);
+    if (fread(&reg->removido, sizeof(reg->removido), 1, p_bin) != 1) return;
+    if (fread(&reg->proximo, sizeof(reg->proximo), 1, p_bin) != 1) return;
+    if (fread(&reg->codEstacao, sizeof(reg->codEstacao), 1, p_bin) != 1) return;
+    if (fread(&reg->codLinha, sizeof(reg->codLinha), 1, p_bin) != 1) return;
+    if (fread(&reg->codProxEstacao, sizeof(reg->codProxEstacao), 1, p_bin) != 1) return;
+    if (fread(&reg->distProxEstacao, sizeof(reg->distProxEstacao), 1, p_bin) != 1) return;
+    if (fread(&reg->codLinhaIntegra, sizeof(reg->codLinhaIntegra), 1, p_bin) != 1) return;
+    if (fread(&reg->codEstIntegra, sizeof(reg->codEstIntegra), 1, p_bin) != 1) return;
 
-    fread(&reg->tamNomeEstacao, sizeof(reg->tamNomeEstacao), 1, p_bin);
+    if (fread(&reg->tamNomeEstacao, sizeof(reg->tamNomeEstacao), 1, p_bin) != 1) return;
     if (reg->tamNomeEstacao > 0)
     {
-        fread(reg->nomeEstacao, sizeof(char), reg->tamNomeEstacao, p_bin);
+        if (fread(reg->nomeEstacao, sizeof(char), reg->tamNomeEstacao, p_bin) != (size_t)reg->tamNomeEstacao) return;
         reg->nomeEstacao[reg->tamNomeEstacao] = '\0'; // coloca \0 na string
     }
     else
         reg->nomeEstacao[0] = '\0';
 
-    fread(&reg->tamNomeLinha, sizeof(reg->tamNomeLinha), 1, p_bin);
+    if (fread(&reg->tamNomeLinha, sizeof(reg->tamNomeLinha), 1, p_bin) != 1) return;
     if (reg->tamNomeLinha > 0)
     {
-        fread(reg->nomeLinha, sizeof(char), reg->tamNomeLinha, p_bin);
+        if (fread(reg->nomeLinha, sizeof(char), reg->tamNomeLinha, p_bin) != (size_t)reg->tamNomeLinha) return;
         reg->nomeLinha[reg->tamNomeLinha] = '\0'; // coloca \0 na string
     }
     else
@@ -253,8 +253,6 @@ bool atualizar_estacoes(FILE *p_bin)
     int nroEstacoes = get_nro_estacoes(hash_single);
     int nroParesEstacao = get_nro_pares(hash_pair);
 
-    printf("Número de estações únicas: %d\n", nroEstacoes);
-    printf("Número de pares únicos de estações: %d\n", nroParesEstacao);
     // Aponta para nroEstacoes
     fseek(p_bin, 9, SEEK_SET);
     // Escreve no arquivo o numero de estacoes e o numero de pares de estacoes

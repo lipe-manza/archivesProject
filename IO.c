@@ -181,7 +181,8 @@ void ScanQuoteString(char *str)
 
         // Devolve o caractere para o stdin
         ungetc(R, stdin);
-        scanf("%s", str);
+        if (scanf("%s", str) != 1)
+            strcpy(str, "");
     }
     else
     { // EOF
@@ -230,40 +231,4 @@ void read_new_registro_from_terminal(REG *new_registro)
     return;
 }
 
-void print_cabecalho(char *bin_name)
-{
 
-    FILE *p_bin = fopen(bin_name, "rb"); // Tenta criar .bin para escrita binaria
-    if (p_bin == NULL)
-    {
-        printf("Falha no processamento do arquivo.\n");
-    }
-
-    char status;
-    fread(&status, sizeof(char), 1, p_bin);
-    if (status == '0')
-    {
-        printf("Inconsistente.\n");
-    }
-    printf("status: %c\n", status);
-
-    int topo;
-    fread(&topo, sizeof(int), 1, p_bin);
-    printf("topo: %d\n", topo);
-
-    int prox_rrn = 0;
-    fread(&prox_rrn, sizeof(int), 1, p_bin);
-    printf("prox_rrn: %d\n", prox_rrn);
-
-    int nro_estacoes;
-    fread(&nro_estacoes, sizeof(int), 1, p_bin);
-    printf("nro_estacoes: %d\n", nro_estacoes);
-
-    int nro_pares_estacoes = 0;
-    fread(&nro_pares_estacoes, sizeof(int), 1, p_bin);
-    printf("nro_pares_estacoes: %d\n", nro_pares_estacoes);
-
-    // Fecha os arquivos
-    fclose(p_bin);
-    p_bin = NULL;
-}

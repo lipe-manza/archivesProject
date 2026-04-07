@@ -33,8 +33,14 @@ void free_tables(HashEstacao *hash_single, HashPar *hash_pair)
         free_hash_par(hash_pair);
 }
 
-bool csv_to_bin(char *csv_name, char *bin_name)
+void csv_to_bin()
 {
+    // Litura dos nomes dos arquivos .csv e .bin
+    char bin_name[50];
+    char csv_name[50];
+    if (scanf("%s %s", csv_name, bin_name) != 2)
+        return;
+
     // Cria as hashtables para contar as estações e pares de estaçõs únicas
     HashEstacao *hash_single = criar_hash_estacao();
     HashPar *hash_pair = criar_hash_par();
@@ -44,8 +50,8 @@ bool csv_to_bin(char *csv_name, char *bin_name)
     {
         free(hash_single);
         free(hash_pair);
-        printf("Falha no processamento do arquivo.\n");
-        return false;
+        printf("Falha no processamento do arquivo1.\n");
+        return;
     }
 
     // Tenta abrir o arquivo cvs para leitura
@@ -54,15 +60,15 @@ bool csv_to_bin(char *csv_name, char *bin_name)
     {
         free(hash_single);
         free(hash_pair);
-        printf("Falha no processamento do arquivo.\n");
-        return false;
+        printf("Falha no processamento do arquivo2.\n");
+        return;
     }
 
     FILE *p_bin = fopen(bin_name, "wb"); // Tenta criar .bin para escrita binaria
     if (p_bin == NULL)
     {
-        printf("Falha no processamento do arquivo.\n");
-        return false;
+        printf("Falha no processamento do arquivo3.\n");
+        return;
     }
 
     char status = '0';
@@ -76,13 +82,9 @@ bool csv_to_bin(char *csv_name, char *bin_name)
     REG reg;
     int count_regs = 0;
 
-    // Pula a primeira linha
-    fgets(buffer, sizeof(buffer), p_csv);
-
     while (fgets(buffer, sizeof(buffer), p_csv) != NULL)
     {
         buffer[strcspn(buffer, "\r\n")] = '\0';
-
         char *p = buffer;
         char *token;
 
@@ -94,17 +96,24 @@ bool csv_to_bin(char *csv_name, char *bin_name)
         token = strsep(&p, ",");
         if (token == NULL)
         {
-            printf("Falha no processamento do arquivo.");
-            return false;
+            printf("Falha no processamento do arquivo4.");
+            return;
         }
         reg.codEstacao = atoi(token);
+
+        // Verifica se o primeiro e um numero se nao pula
+        int t;
+        if (sscanf(token, "%d", &t) != 1)
+        {
+            continue;
+        }
 
         // pega o segundo campo do csv (NomeEstacao) string
         token = strsep(&p, ",");
         if (token == NULL)
         {
-            printf("Falha no processamento do arquivo.");
-            return false;
+            printf("Falha no processamento do arquivo5.");
+            return;
         }
         reg.tamNomeEstacao = strlen(token);
         strcpy(reg.nomeEstacao, token);
@@ -113,8 +122,8 @@ bool csv_to_bin(char *csv_name, char *bin_name)
         token = strsep(&p, ",");
         if (token == NULL)
         {
-            printf("Falha no processamento do arquivo.");
-            return false;
+            printf("Falha no processamento do arquivo6.");
+            return;
         }
         reg.codLinha = (strlen(token) > 0) ? atoi(token) : -1;
 
@@ -136,7 +145,7 @@ bool csv_to_bin(char *csv_name, char *bin_name)
         if (token == NULL)
         {
             printf("Falha no processamento do arquivo.");
-            return false;
+            return;
         }
         reg.codProxEstacao = (strlen(token) > 0) ? atoi(token) : -1;
 
@@ -145,7 +154,7 @@ bool csv_to_bin(char *csv_name, char *bin_name)
         if (token == NULL)
         {
             printf("Falha no processamento do arquivo.");
-            return false;
+            return;
         }
         reg.distProxEstacao = (strlen(token) > 0) ? atoi(token) : -1;
 
@@ -154,7 +163,7 @@ bool csv_to_bin(char *csv_name, char *bin_name)
         if (token == NULL)
         {
             printf("Falha no processamento do arquivo.");
-            return false;
+            return;
         }
         reg.codLinhaIntegra = (strlen(token) > 0) ? atoi(token) : -1;
 
@@ -163,7 +172,7 @@ bool csv_to_bin(char *csv_name, char *bin_name)
         if (token == NULL)
         {
             printf("Falha no processamento do arquivo.");
-            return false;
+            return;
         }
         // Trunca a ultima string se for vazia tirando o \r e o \n
         token[strcspn(token, "\r\n")] = '\0';
@@ -217,5 +226,8 @@ bool csv_to_bin(char *csv_name, char *bin_name)
     // Desaloca a memória das hash tables
     free_tables(hash_single, hash_pair);
 
-    return true;
+    // Binario na tela
+    BinarioNaTela(bin_name);
+
+    return;
 }
