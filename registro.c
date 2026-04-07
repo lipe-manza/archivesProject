@@ -2,8 +2,8 @@
 #include <stdbool.h>
 #include <string.h>
 #include <stdlib.h>
-#include "../include/registro.h"
-#include "../include/hash_tables.h"
+#include "registro.h"
+#include "hash_tables.h"
 
 void read_from_bin(FILE *p_bin, REG *reg)
 {
@@ -194,7 +194,7 @@ void atualizar_registro(REG *atualizado, bool atualizar[], int RRN, FILE *p_bin)
 bool atualizar_estacoes(FILE *p_bin)
 {
     // Cria as hashtables para contar as estações e pares de estaçõs únicas
-    HashEstacao *hash_single = criar_hash_est();
+    HashEstacao *hash_single = criar_hash_estacao();
     HashPar *hash_pair = criar_hash_par();
 
     // Encerra o programa em caso de falha de alocação de algum dos if (hash_single == NULL || hash_pair == NULL)
@@ -203,7 +203,6 @@ bool atualizar_estacoes(FILE *p_bin)
         free(hash_single);
         free(hash_pair);
         printf("Falha no processamento do arquivo\n");
-        printf("Hash\n");
         return false;
     }
 
@@ -232,8 +231,9 @@ bool atualizar_estacoes(FILE *p_bin)
         // Como o nomeEstacao nunca é nulo não precisa de verificação
         char nomeEstacao[41];
         fread(nomeEstacao, sizeof(char), tamNomeEstacao, p_bin);
+        nomeEstacao[tamNomeEstacao] = '\0'; // coloca \0 na string
 
-        inserir_est(hash_single, nomeEstacao);
+        inserir_estacao(hash_single, nomeEstacao);
 
         int codEstacao = -1;
         // Aponta para o codEstacao
@@ -252,6 +252,9 @@ bool atualizar_estacoes(FILE *p_bin)
 
     int nroEstacoes = get_nro_estacoes(hash_single);
     int nroParesEstacao = get_nro_pares(hash_pair);
+
+    printf("Número de estações únicas: %d\n", nroEstacoes);
+    printf("Número de pares únicos de estações: %d\n", nroParesEstacao);
     // Aponta para nroEstacoes
     fseek(p_bin, 9, SEEK_SET);
     // Escreve no arquivo o numero de estacoes e o numero de pares de estacoes
@@ -259,8 +262,8 @@ bool atualizar_estacoes(FILE *p_bin)
     fwrite(&nroParesEstacao, sizeof(int), 1, p_bin);
 
     // Dar free nas hashtables
-    destruir_hash_est(hash_single);
-    destruir_hash_par(hash_pair);
+    free_hash_estacao(hash_single);
+    free_hash_par(hash_pair);
 
 
     return true;

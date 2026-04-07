@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdbool.h>
-#include "../include/filtro.h"
+#include "filtro.h"
 
 int field_to_index(char *str)
 {

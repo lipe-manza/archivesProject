@@ -1,21 +1,21 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "../include/hash_tables.h"
+#include "hash_tables.h"
 
 #define TABLE_SIZE 1009
 
 // --- Estruturas Internas (Ocultas do usuário) ---
 
-typedef struct NodeEst
+typedef struct NodeEstacao
 {
     char nomeEstacao[MAX_NOME];
-    struct NodeEst *next;
-} NodeEst;
+    struct NodeEstacao *next;
+} NodeEstacao;
 
 struct hash_estacao
 {
-    NodeEst *buckets[TABLE_SIZE];
+    NodeEstacao *buckets[TABLE_SIZE];
     int count;
 };
 
@@ -34,7 +34,7 @@ struct hash_par
 
 // --- Funções Auxiliares de Hash ---
 
-static unsigned int _hash_string(const char *str)
+static unsigned int hash_string(const char *str)
 {
     unsigned int hash = 5381;
     int c;
@@ -42,6 +42,7 @@ static unsigned int _hash_string(const char *str)
         hash = ((hash << 5) + hash) + c;
     return hash % TABLE_SIZE;
 }
+
 static unsigned int _hash_int_pair(int c1, int c2)
 {
     int minn = c1 < c2 ? c1 : c2;
@@ -51,19 +52,19 @@ static unsigned int _hash_int_pair(int c1, int c2)
 
 // --- Implementação: Hash de Estações ---
 
-HashEstacao *criar_hash_est()
+HashEstacao *criar_hash_estacao()
 {
     HashEstacao *ht = (HashEstacao *)calloc(1, sizeof(HashEstacao));
     return ht;
 }
 
-int inserir_est(HashEstacao *ht, const char *nome)
+int inserir_estacao(HashEstacao *ht, const char *nome)
 {
     if (!ht || !nome)
         return 0;
-    unsigned int idx = _hash_string(nome);
+    unsigned int idx = hash_string(nome);
 
-    NodeEst *curr = ht->buckets[idx];
+    NodeEstacao *curr = ht->buckets[idx];
     while (curr)
     {
         if (strcmp(curr->nomeEstacao, nome) == 0)
@@ -71,7 +72,7 @@ int inserir_est(HashEstacao *ht, const char *nome)
         curr = curr->next;
     }
 
-    NodeEst *novo = (NodeEst *)malloc(sizeof(NodeEst));
+    NodeEstacao *novo = (NodeEstacao *)malloc(sizeof(NodeEstacao));
     strncpy(novo->nomeEstacao, nome, MAX_NOME - 1);
     novo->nomeEstacao[MAX_NOME - 1] = '\0';
     novo->next = ht->buckets[idx];
@@ -133,16 +134,16 @@ int get_nro_pares(HashPar *ht)
 
 // --- Funções de Liberação de Memória ---
 
-void destruir_hash_est(HashEstacao *ht)
+void free_hash_estacao(HashEstacao *ht)
 {
     if (!ht)
         return;
     for (int i = 0; i < TABLE_SIZE; i++)
     {
-        NodeEst *curr = ht->buckets[i];
+        NodeEstacao *curr = ht->buckets[i];
         while (curr)
         {
-            NodeEst *aux = curr;
+            NodeEstacao *aux = curr;
             curr = curr->next;
             free(aux);
         }
@@ -150,7 +151,7 @@ void destruir_hash_est(HashEstacao *ht)
     free(ht);
 }
 
-void destruir_hash_par(HashPar *ht)
+void free_hash_par(HashPar *ht)
 {
     if (!ht)
         return;

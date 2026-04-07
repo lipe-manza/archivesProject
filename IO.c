@@ -3,9 +3,52 @@
 #include <stdbool.h>
 #include <stdlib.h>
 #include <ctype.h>
-#include "../include/IO.h"
+#include "IO.h"
 
+void print_registro_in_terminal_csv(REG *registro)
+{
+    // Nao podem ser nulos
+    printf("%d,", registro->codEstacao);
+    printf("%s,", registro->nomeEstacao);
 
+    // Código da Linha
+    if (registro->codLinha == -1)
+        printf("NULO,");
+    else
+        printf("%d,", registro->codLinha);
+
+    // Nome da Linha
+    if (registro->tamNomeLinha == 0)
+        printf("NULO,");
+    else
+        printf("%s,", registro->nomeLinha);
+
+    // Código da próxima estação
+    if (registro->codProxEstacao == -1)
+        printf("NULO,");
+    else
+        printf("%d,", registro->codProxEstacao);
+
+    // Distância da próxima estação
+    if (registro->distProxEstacao == -1)
+        printf("NULO,");
+    else
+        printf("%d,", registro->distProxEstacao);
+
+    // Código da linha integrante
+    if (registro->codLinhaIntegra == -1)
+        printf("NULO,");
+    else
+        printf("%d,", registro->codLinhaIntegra);
+
+    // Código da Estação que faz a integrante
+    if (registro->codEstIntegra == -1)
+        printf("NULO");
+    else
+        printf("%d", registro->codEstIntegra);
+
+    printf("\n");
+}
 
 void print_registro_in_terminal(REG *registro)
 {
@@ -187,3 +230,40 @@ void read_new_registro_from_terminal(REG *new_registro)
     return;
 }
 
+void print_cabecalho(char *bin_name)
+{
+
+    FILE *p_bin = fopen(bin_name, "rb"); // Tenta criar .bin para escrita binaria
+    if (p_bin == NULL)
+    {
+        printf("Falha no processamento do arquivo.\n");
+    }
+
+    char status;
+    fread(&status, sizeof(char), 1, p_bin);
+    if (status == '0')
+    {
+        printf("Inconsistente.\n");
+    }
+    printf("status: %c\n", status);
+
+    int topo;
+    fread(&topo, sizeof(int), 1, p_bin);
+    printf("topo: %d\n", topo);
+
+    int prox_rrn = 0;
+    fread(&prox_rrn, sizeof(int), 1, p_bin);
+    printf("prox_rrn: %d\n", prox_rrn);
+
+    int nro_estacoes;
+    fread(&nro_estacoes, sizeof(int), 1, p_bin);
+    printf("nro_estacoes: %d\n", nro_estacoes);
+
+    int nro_pares_estacoes = 0;
+    fread(&nro_pares_estacoes, sizeof(int), 1, p_bin);
+    printf("nro_pares_estacoes: %d\n", nro_pares_estacoes);
+
+    // Fecha os arquivos
+    fclose(p_bin);
+    p_bin = NULL;
+}

@@ -2,9 +2,9 @@
 #include <string.h>
 #include <stdbool.h>
 #include <stdlib.h>
-#include "../include/sql_functions.h"
-#include "../include/hash_tables.h"
-#include "../include/IO.h"
+#include "sql_functions.h"
+#include "hash_tables.h"
+#include "IO.h"
 
 /*
 typedef struct cabecalho
@@ -28,15 +28,15 @@ void close_files(FILE *p_bin, FILE *p_csv)
 void free_tables(HashEstacao *hash_single, HashPar *hash_pair)
 {
     if (hash_single)
-        destruir_hash_est(hash_single);
+        free_hash_estacao(hash_single);
     if (hash_pair)
-        destruir_hash_par(hash_pair);
+        free_hash_par(hash_pair);
 }
 
 bool csv_to_bin(char *csv_name, char *bin_name)
 {
     // Cria as hashtables para contar as estações e pares de estaçõs únicas
-    HashEstacao *hash_single = criar_hash_est();
+    HashEstacao *hash_single = criar_hash_estacao();
     HashPar *hash_pair = criar_hash_par();
 
     // Encerra o programa em caso de falha de alocação de algum dos if (hash_single == NULL || hash_pair == NULL)
@@ -44,8 +44,7 @@ bool csv_to_bin(char *csv_name, char *bin_name)
     {
         free(hash_single);
         free(hash_pair);
-        printf("Falha no processamento do arquivo\n");
-        printf("Hash\n");
+        printf("Falha no processamento do arquivo.\n");
         return false;
     }
 
@@ -55,16 +54,14 @@ bool csv_to_bin(char *csv_name, char *bin_name)
     {
         free(hash_single);
         free(hash_pair);
-        printf("Falha no processamento do arquivo\n");
-        printf("fopen csv\n");
+        printf("Falha no processamento do arquivo.\n");
         return false;
     }
 
     FILE *p_bin = fopen(bin_name, "wb"); // Tenta criar .bin para escrita binaria
     if (p_bin == NULL)
     {
-        printf("Falha no processamento do arquivo\n");
-        printf("fopen bin\n");
+        printf("Falha no processamento do arquivo.\n");
         return false;
     }
 
@@ -181,7 +178,7 @@ bool csv_to_bin(char *csv_name, char *bin_name)
         int codProxEstacao = reg.codProxEstacao;
 
         // Insere a estação na hash table para contar quantas existem
-        inserir_est(hash_single, str_nomeEstacao);
+        inserir_estacao(hash_single, str_nomeEstacao);
         // Insere as estação na hash table para contar quantos pares existem
         inserir_par(hash_pair, codEstacao, codProxEstacao);
         // conta quantos registros para o RRN

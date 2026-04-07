@@ -2,9 +2,9 @@
 #include <string.h>
 #include <stdbool.h>
 #include <stdlib.h>
-#include "../include/sql_functions.h"
-#include "../include/IO.h"
-#include "../include/filtro.h"
+#include "sql_functions.h"
+#include "IO.h"
+#include "filtro.h"
 
 
 bool select_from(char *bin_name)
@@ -13,7 +13,7 @@ bool select_from(char *bin_name)
     FILE *p_bin = fopen(bin_name, "rb"); // Tenta criar .bin para escrita binaria
     if (p_bin == NULL)
     {
-        printf("Falha no processamento do arquivo\n");
+        printf("Falha no processamento do arquivo.\n");
         return false;
     }
 
@@ -45,6 +45,7 @@ bool select_from(char *bin_name)
 
         // Verifica se o registro está removido , e se estiver não printa
         if (registro.removido == '0')
+            // print_registro_in_terminal(&registro);
             print_registro_in_terminal(&registro);
     }
 
@@ -121,7 +122,7 @@ bool select_from_where(char *bin_name)
     FILE *p_bin = fopen(bin_name, "rb"); // Tenta criar .bin para escrita binaria
     if (p_bin == NULL)
     {
-        printf("Falha no processamento do arquivo\n");
+        printf("Falha no processamento do arquivo.\n");
         return false;
     }
 

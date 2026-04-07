@@ -1,10 +1,8 @@
 #include <stdio.h>
 #include <stdbool.h>
-#include "../include/IO.h"
-#include "../include/filtro.h"
-#include "../include/registro.h"
-
-
+#include "IO.h"
+#include "filtro.h"
+#include "registro.h"
 
 bool insert_from_where(char *bin_name)
 {
@@ -19,10 +17,10 @@ bool insert_from_where(char *bin_name)
     new_registro.proximo = -1;
 
 
-    FILE *p_bin = fopen(bin_name, "wb"); // Tenta criar .bin para escrita binaria
+    FILE *p_bin = fopen(bin_name, "rb+"); // Tenta criar .bin para escrita binaria
     if (p_bin == NULL)
     {
-        printf("Falha no processamento do arquivo\n");
+        printf("Falha no processamento do arquivo.\n");
         return false;
     }
 

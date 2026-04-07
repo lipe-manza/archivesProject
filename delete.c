@@ -1,9 +1,9 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include "../include/sql_functions.h"
-#include "../include/filtro.h"
-#include "../include/IO.h"
+#include "sql_functions.h"
+#include "filtro.h"
+#include "IO.h"
 
 bool delete_from_where(char *bin_name)
 {
@@ -50,7 +50,7 @@ bool delete_from_where(char *bin_name)
     FILE *p_bin = fopen(bin_name, "rb+"); // Abre o arquivo para leitura e escrita em modo binário
     if (p_bin == NULL)
     {
-        printf("Falha no processamento do arquivo\n");
+        printf("Falha no processamento do arquivo.\n");
         return false;
     }
 
