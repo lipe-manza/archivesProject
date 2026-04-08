@@ -50,7 +50,7 @@ void csv_to_bin()
     {
         free(hash_single);
         free(hash_pair);
-        printf("Falha no processamento do arquivo1.\n");
+        printf("Falha no processamento do arquivo.\n");
         return;
     }
 
@@ -60,14 +60,14 @@ void csv_to_bin()
     {
         free(hash_single);
         free(hash_pair);
-        printf("Falha no processamento do arquivo2.\n");
+        printf("Falha no processamento do arquivo.\n");
         return;
     }
 
     FILE *p_bin = fopen(bin_name, "wb"); // Tenta criar .bin para escrita binaria
     if (p_bin == NULL)
     {
-        printf("Falha no processamento do arquivo3.\n");
+        printf("Falha no processamento do arquivo.\n");
         return;
     }
 
@@ -96,7 +96,7 @@ void csv_to_bin()
         token = strsep(&p, ",");
         if (token == NULL)
         {
-            printf("Falha no processamento do arquivo4.");
+            printf("Falha no processamento do arquivo.");
             return;
         }
         reg.codEstacao = atoi(token);
@@ -112,7 +112,7 @@ void csv_to_bin()
         token = strsep(&p, ",");
         if (token == NULL)
         {
-            printf("Falha no processamento do arquivo5.");
+            printf("Falha no processamento do arquivo.");
             return;
         }
         reg.tamNomeEstacao = strlen(token);
@@ -122,7 +122,7 @@ void csv_to_bin()
         token = strsep(&p, ",");
         if (token == NULL)
         {
-            printf("Falha no processamento do arquivo6.");
+            printf("Falha no processamento do arquivo.");
             return;
         }
         reg.codLinha = (strlen(token) > 0) ? atoi(token) : -1;

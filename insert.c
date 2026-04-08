@@ -12,7 +12,7 @@ void insert_from_where()
     FILE *p_bin = fopen(bin_name, "rb+"); // Tenta abir .bin para escrita binaria
     if (p_bin == NULL)
     {
-        printf("Falha no processamento do arquivo1.\n");
+        printf("Falha no processamento do arquivo.\n");
         return;
     }
 
@@ -20,10 +20,11 @@ void insert_from_where()
     char status;
     if (fread(&status, sizeof(char), 1, p_bin) != 1)
     {
-        printf("Falha no processamento do arquivo2.\n");
+        printf("Falha no processamento do arquivo.\n");
         fclose(p_bin);
         return;
     }
+
     if (status == '0')
     {
         printf("Falha no processamento do arquivo3.\n");
@@ -58,7 +59,7 @@ void insert_from_where()
         int topo = -1;
         if (fread(&topo, sizeof(int), 1, p_bin) != 1)
         {
-            printf("Falha no processamento do arquivo4.\n");
+            printf("Falha no processamento do arquivo.\n");
             fclose(p_bin);
             return;
         }
@@ -68,7 +69,7 @@ void insert_from_where()
         int ProxRRN = 0;
         if (fread(&ProxRRN, sizeof(int), 1, p_bin) != 1)
         {
-            printf("Falha no processamento do arquivo5.\n");
+            printf("Falha no processamento do arquivo.\n");
             fclose(p_bin);
             return;
         }
@@ -86,18 +87,18 @@ void insert_from_where()
         }
         else
         {
-
+            int topo_antigo = topo; // Guarda o valor do topo antigo para atualizar o campo proximo do novo registro
             // Se a pilha de removidos não estiver vazia, le o novo topo
-            fseek(p_bin, topo * 80 + 18, SEEK_SET);
+            fseek(p_bin, topo_antigo* 80 + 18, SEEK_SET);
             if (fread(&topo, sizeof(int), 1, p_bin) != 1)
             {
-                printf("Falha no processamento do arquivo6.\n");
+                printf("Falha no processamento do arquivo.\n");
                 fclose(p_bin);
                 return;
             }
 
             // Vai para o local do novo registro e escreve ele no arquivo
-            fseek(p_bin, topo * 80 + 17, SEEK_SET);
+            fseek(p_bin, topo_antigo * 80 + 17, SEEK_SET);
             write_in_bin(p_bin, &new_registro);
 
             // Vai para o 1 byte do cabecalho (topo) para atualizar o topo da pilha de removidos
@@ -106,7 +107,7 @@ void insert_from_where()
         }
 
     }
-    
+
     atualizar_estacoes(p_bin);
 
     // Vai para o 0 byte do cabecalho (status) para atualizar o status

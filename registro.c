@@ -232,7 +232,6 @@ bool atualizar_estacoes(FILE *p_bin)
         char nomeEstacao[41];
         fread(nomeEstacao, sizeof(char), tamNomeEstacao, p_bin);
         nomeEstacao[tamNomeEstacao] = '\0'; // coloca \0 na string
-
         inserir_estacao(hash_single, nomeEstacao);
 
         int codEstacao = -1;
