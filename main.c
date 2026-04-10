@@ -16,35 +16,23 @@ int main()
     switch (n)
     {
     case 1: // Create table
-    {
         csv_to_bin();
         break;
-    }
     case 2: // SELECT FROM
-    {
         select_from();
         break;
-    }
     case 3: // SELECT FROM WHERE
-    {
         select_from_where();
         break;
-    }
     case 4: // DELETE FROM WHERE
-    {
         delete_from_where();
         break;
-    }
     case 5: // INSERT INTO
-    {
         insert_from_where();
         break;
-    }
     case 6: // UPDATE SET WHERE
-    {
         update_set_where();
         break;
-    }
     }
 
     return 0;

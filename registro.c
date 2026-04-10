@@ -55,6 +55,7 @@ void write_in_bin(FILE *p_bin, REG *reg)
     if (reg->tamNomeLinha > 0)
         fwrite(reg->nomeLinha, sizeof(char), reg->tamNomeLinha, p_bin);
 
+    // Escreve os bytes de lixo no final do registro para completar os 80 bytes do registro
     char lixo = '$';
     int bytes_usados = 37 + reg->tamNomeEstacao + reg->tamNomeLinha;
     int lixo_size = 80 - bytes_usados;
@@ -175,10 +176,9 @@ void atualizar_registro(REG *atualizado, bool atualizar[], int RRN, FILE *p_bin)
             if (atualizado->tamNomeLinha > 0)
                 fwrite(atualizado->nomeLinha, sizeof(char), atualizado->tamNomeLinha, p_bin);
 
+            // Escreve os bytes de lixo no final do registro
             char lixo = '$';
-
             int bytes_usados = 37 + tamNomeEstacao + atualizado->tamNomeLinha;
-
             int lixo_size = 80 - bytes_usados;
 
             for (int i = 0; i < lixo_size; i++)
@@ -249,6 +249,7 @@ bool atualizar_estacoes(FILE *p_bin)
         inserir_par(hash_pair, codEstacao, codProxEstacao);
     }
 
+    // Variaveis para armazenar o numero de estações e pares de estações únicas
     int nroEstacoes = get_nro_estacoes(hash_single);
     int nroParesEstacao = get_nro_pares(hash_pair);
 
@@ -261,7 +262,6 @@ bool atualizar_estacoes(FILE *p_bin)
     // Dar free nas hashtables
     free_hash_estacao(hash_single);
     free_hash_par(hash_pair);
-
 
     return true;
 }

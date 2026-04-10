@@ -3,6 +3,7 @@
 #include <stdbool.h>
 #include "filtro.h"
 
+// Função auxiliar "hash" para converter o nome do campo em um inteiro representando o campo
 int field_to_index(char *str)
 {
     char *fields[] = {"codEstacao", "codLinha", "codProxEstacao", "distProxEstacao", "codLinhaIntegra", "codEstIntegra", "nomeEstacao", "nomeLinha"};
@@ -13,9 +14,11 @@ int field_to_index(char *str)
             return i;
     }
 
+    // Se o campo não for encontrado retorna -1 para indicar que o campo é inválido
     return -1;
 }
 
+// Função para setar os campos do filtro de acordo com o campo a ser pesquisado e o valor lido do terminal
 void set_filtro(REG *filtro, int op, char *str)
 {
     switch (op)
@@ -49,6 +52,7 @@ void set_filtro(REG *filtro, int op, char *str)
     }
 }
 
+// Função para comparar um registro lido do arquivo binário com o filtro de pesquisa, retornando true se o registro corresponde ao filtro e false caso contrário
 bool match_filtro(REG *reg, bool pesquisa[], REG *filtro)
 {
     for (int i = 0; i < PUBLIC_FIELDS; i++)

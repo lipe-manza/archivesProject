@@ -6,17 +6,19 @@
 
 void insert_from_where()
 {
+    // Lê o nome do arquivo binário
     char bin_name[41];
     scanf("%s", bin_name);
 
-    FILE *p_bin = fopen(bin_name, "rb+"); // Tenta abir .bin para escrita binaria
+    // Tenta abrir o arquivo para leitura e escrita em modo binário
+    FILE *p_bin = fopen(bin_name, "rb+");
     if (p_bin == NULL)
     {
         printf("Falha no processamento do arquivo.\n");
         return;
     }
 
-    // Escreve o status do arquivo como '0' para indicar que ele está inconsistente durante a escrita
+    // Lê o status do arquivo para verificar se ele está consistente
     char status;
     if (fread(&status, sizeof(char), 1, p_bin) != 1)
     {
@@ -24,7 +26,6 @@ void insert_from_where()
         fclose(p_bin);
         return;
     }
-
     if (status == '0')
     {
         printf("Falha no processamento do arquivo3.\n");
@@ -37,10 +38,12 @@ void insert_from_where()
     fseek(p_bin, 0, SEEK_SET);
     fwrite(&status, sizeof(char), 1, p_bin);
 
+    // Lê o número de registros a serem inseridos
     int n;
     if (scanf("%d", &n) != 1)
         return;
 
+    // Loop para ler os registros a serem inseridos e processar cada um
     for (int i = 0; i < n; i++)
     {
         // Struct registro auxiliar para ler o binario
@@ -77,9 +80,11 @@ void insert_from_where()
         // Se a pilha de removidos estiver vazia, insere o novo registro no final do arquivo
         if (topo == -1)
         {
+            // Vai para o primeiro byteoffset do registro de RRN ProxRRN e escreve o novo registro no arquivo
             fseek(p_bin, ProxRRN * 80 + 17, SEEK_SET);
             write_in_bin(p_bin, &new_registro);
 
+            // Atualiza o próximo RRN
             ProxRRN++;
             // Vai para o 5 byte do cabecalho (proxRRN) para atualizar quantos registros existem
             fseek(p_bin, 5, SEEK_SET);
@@ -87,7 +92,8 @@ void insert_from_where()
         }
         else
         {
-            int topo_antigo = topo; // Guarda o valor do topo antigo para atualizar o campo proximo do novo registro
+            // Guarda o valor do topo antigo para depois acessar onde o novo registro será inserido
+            int topo_antigo = topo;
             // Se a pilha de removidos não estiver vazia, le o novo topo
             fseek(p_bin, topo_antigo* 80 + 18, SEEK_SET);
             if (fread(&topo, sizeof(int), 1, p_bin) != 1)
@@ -108,15 +114,18 @@ void insert_from_where()
 
     }
 
+    // Atualiza o número de estações e pares de estações no registro de cabeçalho
     atualizar_estacoes(p_bin);
 
     // Vai para o 0 byte do cabecalho (status) para atualizar o status
     status = '1';
     fseek(p_bin, 0, SEEK_SET);
     fwrite(&status, sizeof(char), 1, p_bin);
+
     // Fecha os arquivos
     fclose(p_bin);
     p_bin = NULL;
 
+    // Chama a função binarioNaTela
     BinarioNaTela(bin_name);
 }

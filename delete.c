@@ -7,10 +7,15 @@
 
 void delete_from_where()
 {
+    // Lê o nome do arquivo binário
     char bin_name[41];
-    scanf("%s", bin_name);
+    if (scanf("%s", bin_name) != 1)
+    {
+        printf("Falha no processamento do arquivo.\n");
+        return;
+    }
 
-    // Abre o arquivo para leitura e escrita em modo binário
+    // Tenta abrir o arquivo para leitura e escrita em modo binário
     FILE *p_bin = fopen(bin_name, "rb+");
     if (p_bin == NULL)
     {
@@ -33,17 +38,25 @@ void delete_from_where()
         return;
     }
 
+
     // Define o arquivo binário como inconsistente no registro de cabeçalho durante a escrita
     fseek(p_bin, 0, SEEK_SET);
     status = '0';
     fwrite(&status, sizeof(char), 1, p_bin);
 
-    // Array auxiliar para informar quais campos devem ser pesquisados e comparados com o filtro
+    // Lê o número de consultas a serem feitas
     int n;
     if (scanf("%d", &n) != 1)
+    {
+        printf("Falha no processamento do arquivo.\n");
+        fclose(p_bin);
         return;
+    }
+
+    // Loop para ler as consultas e processar cada uma
     for (int i = 0; i < n; i++)
     {
+        // Lê o número de campos a serem pesquisados
         int m = 0;
         scanf(" %d", &m);
 
@@ -55,16 +68,17 @@ void delete_from_where()
         // Struct registro auxiliar para ler o binario
         REG filtro;
 
+        // buffer para ler o campo a ser pesquisado
         char str[41];
 
+        // Loop para ler os campos a serem pesquisados e seus respectivos valores
         for (int j = 0; j < m; j++)
         {
-            // le o campo que quer em um buffer
+            // Le o campo que quer em um buffer
             char field[41];
             scanf(" %s", field);
-            // jogar esse buffer para o "hash" retorna op
+            // Joga esse buffer para o "hash" retorna op
             int op = field_to_index(field);
-
             if (op == -1)
             {
                 printf("Campo não existente.\n");
@@ -74,10 +88,10 @@ void delete_from_where()
             // Seta como true a pesquisa do campo op
             pesquisa[op] = true;
 
-            // Limpa a string
+            // Limpa o buffer
             str[0] = '\0';
 
-            // Le o valor do campo a ser pesquisado e coloca no str
+            // Le o valor do campo a ser pesquisado e coloca no buffer
             ScanQuoteString(str);
 
             // Coloca no registro filtro o que os valores nos campos que vão ser buscados
@@ -104,10 +118,11 @@ void delete_from_where()
             fseek(p_bin, RRN * 80 + 17, SEEK_SET);
             read_from_bin(p_bin, &registro);
 
-            // Verifica se o registro está removido , e se estiver não printa
+            // Verifica se o registro está removido, e se estiver pula para o próximo registro
             if (registro.removido == '1')
                 continue;
 
+            // Verifica se o registro bate com o filtro, e se bater faz a remoção lógica do registro
             if (match_filtro(&registro, pesquisa, &filtro))
             {
                 // Remoção lógica
@@ -130,24 +145,25 @@ void delete_from_where()
                 // Atribui ao campo próximo do registro o valor anterior do topo da pilha de registros removidos
                 fwrite(&topo, sizeof(int), 1, p_bin);
 
-                // Define o topo da pilha como o RRN do último registro removido
+                // Define o topo da pilha como o RRN do registro que acabou de ser removido
                 fseek(p_bin, 1, SEEK_SET);
                 fwrite(&RRN, sizeof(int), 1, p_bin);
             }
         }
-
-        // Atualiza  o numero de estacoes e de pares de estacoes
     }
-    
+
+    // Atualiza o número de estações e pares de estações no registro de cabeçalho
     atualizar_estacoes(p_bin);
 
     // Define o arquivo binário como consistente no registro de cabeçalho
     status = '1';
     fseek(p_bin, 0, SEEK_SET);
     fwrite(&status, sizeof(char), 1, p_bin);
-    // Fecha os arquivos
+
+    // Fecha o arquivo binário e o seta como NULL para evitar acessos indevidos
     fclose(p_bin);
     p_bin = NULL;
 
+    // Chama a função binarioNaTela
     BinarioNaTela(bin_name);
 }

@@ -5,35 +5,33 @@
 
 #define TABLE_SIZE 1009
 
-// --- Estruturas Internas (Ocultas do usuário) ---
-
-typedef struct NodeEstacao
+// Struct
+typedef struct nodeEstacao
 {
     char nomeEstacao[MAX_NOME];
-    struct NodeEstacao *next;
-} NodeEstacao;
+    struct nodeEstacao *next;
+} NDEST;
 
 struct hash_estacao
 {
-    NodeEstacao *buckets[TABLE_SIZE];
+    NDEST *buckets[TABLE_SIZE];
     int count;
 };
 
-typedef struct NodePar
+typedef struct nodePar
 {
     int codA;
     int codB;
-    struct NodePar *next;
-} NodePar;
+    struct nodePar *next;
+} NDPAR;
 
 struct hash_par
 {
-    NodePar *buckets[TABLE_SIZE];
+    NDPAR *buckets[TABLE_SIZE];
     int count;
 };
 
-// --- Funções Auxiliares de Hash ---
-
+//  Função hash para strings usando o algoritmo djb2
 static unsigned int hash_string(const char *str)
 {
     unsigned int hash = 5381;
@@ -43,15 +41,18 @@ static unsigned int hash_string(const char *str)
     return hash % TABLE_SIZE;
 }
 
+// Função hash para pares de inteiros
 static unsigned int _hash_int_pair(int c1, int c2)
 {
+    // Variaveis para garantir que a ordem dos códigos não importe
     int minn = c1 < c2 ? c1 : c2;
     int maxx = c1 > c2 ? c1 : c2;
+
+    // Combinação simples dos dois inteiros para gerar um hash, usando números primos para reduzir colisões
     return (unsigned int)((minn * 31) + (maxx * 17)) % TABLE_SIZE;
 }
 
-// --- Implementação: Hash de Estações ---
-
+// Construtor da hash de estações
 HashEstacao *criar_hash_estacao()
 {
     HashEstacao *ht = (HashEstacao *)calloc(1, sizeof(HashEstacao));
@@ -60,23 +61,30 @@ HashEstacao *criar_hash_estacao()
 
 int inserir_estacao(HashEstacao *ht, const char *nome)
 {
+    // Verifica se a hash table ou o nome são nulos, e retorna 0 para indicar falha
     if (!ht || !nome)
         return 0;
-    unsigned int idx = hash_string(nome);
 
-    NodeEstacao *curr = ht->buckets[idx];
+    // Calcula o hash do nome da estação e retorna o índice da bucket correspondente
+    unsigned int key = hash_string(nome);
+
+    // Percorre a lista encadeada da bucket para verificar se a estação já existe
+    NDEST *curr = ht->buckets[key];
     while (curr)
     {
+        // Se a estação já existe, retorna 0 para indicar que a inserção não foi realizada
         if (strcmp(curr->nomeEstacao, nome) == 0)
-            return 0; // Já existe
+            return 0;
         curr = curr->next;
     }
 
-    NodeEstacao *novo = (NodeEstacao *)malloc(sizeof(NodeEstacao));
-    strncpy(novo->nomeEstacao, nome, MAX_NOME - 1);
-    novo->nomeEstacao[MAX_NOME - 1] = '\0';
-    novo->next = ht->buckets[idx];
-    ht->buckets[idx] = novo;
+    // Se chegou aqui, a estação é nova e deve ser inserida no início da lista encadeada da bucket
+    NDEST *novo = (NDEST *)malloc(sizeof(NDEST));
+    // strncpy(novo->nomeEstacao, nome, MAX_NOME - 1);
+    // novo->nomeEstacao[MAX_NOME - 1] = '\0'; // Garantir terminação nula
+    strcpy(novo->nomeEstacao, nome);
+    novo->next = ht->buckets[key];
+    ht->buckets[key] = novo;
     ht->count++;
     return 1;
 }
@@ -86,8 +94,7 @@ int get_nro_estacoes(HashEstacao *ht)
     return ht ? ht->count : 0;
 }
 
-// --- Implementação: Hash de Pares ---
-
+// Construtor da hash de pares de estações
 HashPar *criar_hash_par()
 {
     return (HashPar *)calloc(1, sizeof(HashPar));
@@ -95,6 +102,7 @@ HashPar *criar_hash_par()
 
 int inserir_par(HashPar *ht, int c1, int c2)
 {
+    // Verifica se a hash table é nula, e retorna 0 para indicar falha
     if (!ht)
         return 0;
 
@@ -102,26 +110,32 @@ int inserir_par(HashPar *ht, int c1, int c2)
     if (c1 == -1 || c2 == -1)
         return 0;
 
-    // A ordem não importa: (1, 2) == (2, 1)
-    unsigned int idx = _hash_int_pair(c1, c2);
-    NodePar *curr = ht->buckets[idx];
+    // Calcula o hash do par de estações e retorna o índice da bucket correspondente
+    unsigned int key = _hash_int_pair(c1, c2);
+    NDPAR *curr = ht->buckets[key];
 
+    // Percorre a lista encadeada da bucket para verificar se o par de estações já existe
     while (curr)
     {
-        // Comparação bidirecional: (1,2) == (2,1)
+        // Compara os códigos das estações onde a ordem não importa
         if ((curr->codA == c1 && curr->codB == c2) || (curr->codA == c2 && curr->codB == c1))
-            return 0; // Par idêntico já existe
+            return 0;
         curr = curr->next;
     }
 
-    // Se chegou aqui, o par é novo
-    NodePar *novo = (NodePar *)malloc(sizeof(NodePar));
-    if (!novo) return 0;
+    // Se chegou aqui, o par é unico
+    // Aloca um novo nó e verifica se a alocação deu certo
+    NDPAR *novo = (NDPAR *)malloc(sizeof(NDPAR));
+    if (!novo)
+        return 0;
 
+    // Insere o novo par no início da lista encadeada da bucket
     novo->codA = c1;
     novo->codB = c2;
-    novo->next = ht->buckets[idx];
-    ht->buckets[idx] = novo;
+    novo->next = ht->buckets[key];
+    ht->buckets[key] = novo;
+
+    // Incrementa a contagem de pares únicos
     ht->count++;
 
     return 1;
@@ -132,18 +146,17 @@ int get_nro_pares(HashPar *ht)
     return ht ? ht->count : 0;
 }
 
-// --- Funções de Liberação de Memória ---
-
+// Função para liberar a memória da hash de estações
 void free_hash_estacao(HashEstacao *ht)
 {
     if (!ht)
         return;
     for (int i = 0; i < TABLE_SIZE; i++)
     {
-        NodeEstacao *curr = ht->buckets[i];
+        NDEST *curr = ht->buckets[i];
         while (curr)
         {
-            NodeEstacao *aux = curr;
+            NDEST *aux = curr;
             curr = curr->next;
             free(aux);
         }
@@ -151,16 +164,17 @@ void free_hash_estacao(HashEstacao *ht)
     free(ht);
 }
 
+// Função para liberar a memória da hash de pares de estações
 void free_hash_par(HashPar *ht)
 {
     if (!ht)
         return;
     for (int i = 0; i < TABLE_SIZE; i++)
     {
-        NodePar *curr = ht->buckets[i];
+        NDPAR *curr = ht->buckets[i];
         while (curr)
         {
-            NodePar *aux = curr;
+            NDPAR *aux = curr;
             curr = curr->next;
             free(aux);
         }

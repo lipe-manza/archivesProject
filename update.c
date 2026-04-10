@@ -7,6 +7,7 @@
 
 void update_set_where()
 {
+    // Lê o nome do arquivo binário
     char bin_name[41];
     if (scanf("%s", bin_name) != 1)
         return;
@@ -39,13 +40,16 @@ void update_set_where()
     status = '0';
     fwrite(&status, sizeof(char), 1, p_bin);
 
+    // Lê o número de consultas a serem feitas
     int n;
     if (scanf("%d", &n) != 1)
         return;
+
+    // Loop para ler as consultas e processar cada uma
     for (int i = 0; i < n; i++)
     {
 
-        // BUSCA
+        // Lê o número de campos a serem pesquisados
         int m = 0;
         scanf(" %d", &m);
 
@@ -59,6 +63,7 @@ void update_set_where()
 
         char str[41];
 
+        // Loop para ler os campos a serem pesquisados e seus respectivos valores para comparação
         for (int j = 0; j < m; j++)
         {
             // le o campo que quer em um buffer
@@ -66,7 +71,6 @@ void update_set_where()
             scanf(" %s", field);
             // jogar esse buffer para o "hash" retorna op
             int op = field_to_index(field);
-
             if (op == -1)
             {
                 printf("Campo não existente.\n");
@@ -76,7 +80,7 @@ void update_set_where()
             // Seta como true a atualizar do campo op
             buscar[op] = true;
 
-            // Limpa a string
+            // Limpa a buffer
             str[0] = '\0';
 
             // Le o valor do campo a ser pesquisado e coloca no str
@@ -116,10 +120,10 @@ void update_set_where()
             // Seta como true a atualizar do campo op
             atualizar[op] = true;
 
-            // Limpa a string
+            // Limpa a buffer
             str[0] = '\0';
 
-            // Le o valor do campo a ser atualizado e coloca no str
+            // Le o valor do campo a ser atualizado e coloca no buffer
             ScanQuoteString(str);
 
             // Coloca no registro atualizado o que os valores nos campos que vão ser atualizado
@@ -129,7 +133,6 @@ void update_set_where()
         // Vai para o 5 byte do cabecalho (proxRRN) para pegar quantos registros existem
         fseek(p_bin, 5, SEEK_SET);
         int count_regs = 0;
-
         fread(&count_regs, sizeof(int), 1, p_bin);
 
         // Struct registro auxiliar para ler o binario
@@ -153,9 +156,9 @@ void update_set_where()
             }
         }
     }
-    
-    fseek(p_bin, 0, SEEK_SET);
+
     // Define o arquivo binário como consistente no registro de cabeçalho
+    fseek(p_bin, 0, SEEK_SET);
     status = '1';
     fwrite(&status, sizeof(char), 1, p_bin);
 
@@ -163,6 +166,6 @@ void update_set_where()
     fclose(p_bin);
     p_bin = NULL;
 
-    // Imprime o arquivo binário atualizado na tela
+    // Chama a função binarioNaTela
     BinarioNaTela(bin_name);
 }

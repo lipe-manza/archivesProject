@@ -6,17 +6,7 @@
 #include "hash_tables.h"
 #include "IO.h"
 
-/*
-typedef struct cabecalho
-{
-    char status; // 0 inconsistente 1 consistente
-    int topo;
-    int proxRRN; // n de registros - 1; byteoffset = 17 + (RRN * 80)
-    int nroEstacoes;
-    int nroParesEstacoes;
-} CAB;
-*/
-
+// Função  auxiliar para fechar os arquivos
 void close_files(FILE *p_bin, FILE *p_csv)
 {
     if (p_bin)
@@ -25,6 +15,7 @@ void close_files(FILE *p_bin, FILE *p_csv)
         fclose(p_csv);
 }
 
+// Função auxiliar para liberar a memória das hash tables
 void free_tables(HashEstacao *hash_single, HashPar *hash_pair)
 {
     if (hash_single)
@@ -33,6 +24,7 @@ void free_tables(HashEstacao *hash_single, HashPar *hash_pair)
         free_hash_par(hash_pair);
 }
 
+// Função principal para converter o arquivo CSV para BIN
 void csv_to_bin()
 {
     // Litura dos nomes dos arquivos .csv e .bin
@@ -45,7 +37,7 @@ void csv_to_bin()
     HashEstacao *hash_single = criar_hash_estacao();
     HashPar *hash_pair = criar_hash_par();
 
-    // Encerra o programa em caso de falha de alocação de algum dos if (hash_single == NULL || hash_pair == NULL)
+    // Encerra o programa em caso de falha de alocação de alguma das hashtables
     if (hash_single == NULL || hash_pair == NULL)
     {
         free(hash_single);
@@ -54,7 +46,7 @@ void csv_to_bin()
         return;
     }
 
-    // Tenta abrir o arquivo cvs para leitura
+    // Tenta abrir o arquivo cvs para leitura e verifica se ele foi aberto com sucesso
     FILE *p_csv = fopen(csv_name, "r");
     if (p_csv == NULL)
     {
@@ -64,15 +56,17 @@ void csv_to_bin()
         return;
     }
 
-    FILE *p_bin = fopen(bin_name, "wb"); // Tenta criar .bin para escrita binaria
+    // Tenta criar o arquivo binário para escrita e verifica se ele foi criado com sucesso
+    FILE *p_bin = fopen(bin_name, "wb");
     if (p_bin == NULL)
     {
         printf("Falha no processamento do arquivo.\n");
         return;
     }
 
+    // Escreve o status como inconsistente no início do arquivo binário
     char status = '0';
-    fwrite(&status, sizeof(char), 1, p_bin); // Status inconsistente
+    fwrite(&status, sizeof(char), 1, p_bin);
 
     // pula 17 bytes para depois ser preenchido pelo cabecalho
     fseek(p_bin, 17, SEEK_SET);
@@ -82,9 +76,13 @@ void csv_to_bin()
     REG reg;
     int count_regs = 0;
 
+    // Lê o arquivo CSV linha por linha e processa cada registro escrevendo no arquivo binário
     while (fgets(buffer, sizeof(buffer), p_csv) != NULL)
     {
+        // Trunca a linha lida para remover o \r e o \n
         buffer[strcspn(buffer, "\r\n")] = '\0';
+
+        // Variáveis para tokenização da linha lida
         char *p = buffer;
         char *token;
 
@@ -92,7 +90,9 @@ void csv_to_bin()
         reg.removido = '0';
         reg.proximo = -1;
 
-        // pega o primeiro campo do csv (CodEstacao) e transforma o numero lido de string para int
+        // Tokeniza a linha lida usando strsep e separa os campos usando a vírgula como delimitador
+
+        // Pega o primeiro campo do csv (CodEstacao) e transforma o numero lido de string para int sem verificar se ele é nulo, pois o campo não pode ser nulo
         token = strsep(&p, ",");
         if (token == NULL)
         {
@@ -101,14 +101,15 @@ void csv_to_bin()
         }
         reg.codEstacao = atoi(token);
 
-        // Verifica se o primeiro e um numero se nao pula
+        // Verifica se o primeiro campo é um número se não pula
+        // Para pular a linha de cabeçalho do csv
         int t;
         if (sscanf(token, "%d", &t) != 1)
         {
             continue;
         }
 
-        // pega o segundo campo do csv (NomeEstacao) string
+        // Pega o segundo campo do csv (NomeEstacao) string sem verificar se ele é nulo, pois o campo não pode ser nulo
         token = strsep(&p, ",");
         if (token == NULL)
         {
@@ -118,7 +119,7 @@ void csv_to_bin()
         reg.tamNomeEstacao = strlen(token);
         strcpy(reg.nomeEstacao, token);
 
-        // CodLinha
+        // Pega o terceiro campo do csv (CodLinha) e transforma o numero lido de string para int
         token = strsep(&p, ",");
         if (token == NULL)
         {
@@ -127,7 +128,7 @@ void csv_to_bin()
         }
         reg.codLinha = (strlen(token) > 0) ? atoi(token) : -1;
 
-        // NomeLinha
+        // Pega o quarto campo do csv (NomeLinha) string
         token = strsep(&p, ",");
         if (token == NULL)
         {
@@ -140,7 +141,7 @@ void csv_to_bin()
             strcpy(reg.nomeLinha, token);
         }
 
-        // CodProxEst
+        // Pega o quinto campo do csv (CodProxEst) e transforma o numero lido de string para int
         token = strsep(&p, ",");
         if (token == NULL)
         {
@@ -149,7 +150,7 @@ void csv_to_bin()
         }
         reg.codProxEstacao = (strlen(token) > 0) ? atoi(token) : -1;
 
-        // DistanciaProxEst
+        // Pega o sexto campo do csv (DistanciaProxEst) e transforma o numero lido de string para int
         token = strsep(&p, ",");
         if (token == NULL)
         {
@@ -158,7 +159,7 @@ void csv_to_bin()
         }
         reg.distProxEstacao = (strlen(token) > 0) ? atoi(token) : -1;
 
-        // CodLinhaInteg
+        // Pega o sétimo campo do csv (CodLinhaInteg) e transforma o numero lido de string para int
         token = strsep(&p, ",");
         if (token == NULL)
         {
@@ -167,20 +168,21 @@ void csv_to_bin()
         }
         reg.codLinhaIntegra = (strlen(token) > 0) ? atoi(token) : -1;
 
-        // CodEstacaoInteg
+        // Pega o oitavo campo do csv (CodEstacaoInteg) e transforma o numero lido de string para int
         token = strsep(&p, ",");
         if (token == NULL)
         {
             printf("Falha no processamento do arquivo.");
             return;
         }
-        // Trunca a ultima string se for vazia tirando o \r e o \n
+        // Trunca a ultima string se for vazia tirando o \r e o \n, apenas como precaução, pois no inicio do loop já é feita a truncagem da linha lida
         token[strcspn(token, "\r\n")] = '\0';
         reg.codEstIntegra = (strlen(token) > 0) ? atoi(token) : -1;
 
         // Escreve o registro no binário
         write_in_bin(p_bin, &reg);
 
+        // Variáveis para inserir na hash tables
         char str_nomeEstacao[41];
         strcpy(str_nomeEstacao, reg.nomeEstacao);
         int codEstacao = reg.codEstacao;
@@ -195,10 +197,9 @@ void csv_to_bin()
     }
 
     // REGISTRO DE CABECALHO
-    // Aponta para o topo
-    fseek(p_bin, 1, SEEK_SET);
 
-    // Escreve o topo
+    // Aponta para o topo da lista de removidos e escreve o valor -1, indicando que não há registros removidos
+    fseek(p_bin, 1, SEEK_SET);
     int topo = -1;
     fwrite(&topo, sizeof(int), 1, p_bin);
 
@@ -213,20 +214,16 @@ void csv_to_bin()
     int nroParesEstacao = get_nro_pares(hash_pair);
     fwrite(&nroParesEstacao, sizeof(int), 1, p_bin);
 
-    // Aponta para o inicio do arquivo
+    // Aponta para o inicio do arquivo binário e escreve o status como consistente pois o arquivo foi escrito com sucesso
     fseek(p_bin, 0, SEEK_SET);
-
-    // Define status como consistente
     status = '1';
     fwrite(&status, sizeof(char), 1, p_bin);
 
     // Fecha os arquivos e da free nos hashs
     close_files(p_bin, p_csv);
-
-    // Desaloca a memória das hash tables
     free_tables(hash_single, hash_pair);
 
-    // Binario na tela
+    // Chama a função binarioNaTela
     BinarioNaTela(bin_name);
 
     return;
