@@ -42,9 +42,9 @@ static unsigned int hash_string(const char *str)
 }
 
 // Função hash para pares de inteiros
-static unsigned int _hash_int_pair(int c1, int c2)
+static unsigned int hash_int_pair(int c1, int c2)
 {
-    // Variaveis para garantir que a ordem dos códigos não importe
+    // Calcula o maior e o menor códgigo para ordena-los de uma forma exeta ao invés da ordem dos argumentos
     int minn = c1 < c2 ? c1 : c2;
     int maxx = c1 > c2 ? c1 : c2;
 
@@ -111,7 +111,7 @@ int inserir_par(HashPar *ht, int c1, int c2)
         return 0;
 
     // Calcula o hash do par de estações e retorna o índice da bucket correspondente
-    unsigned int key = _hash_int_pair(c1, c2);
+    unsigned int key = hash_int_pair(c1, c2);
     NDPAR *curr = ht->buckets[key];
 
     // Percorre a lista encadeada da bucket para verificar se o par de estações já existe
