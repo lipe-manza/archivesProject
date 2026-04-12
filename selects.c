@@ -1,109 +1,81 @@
-#include <stdio.h>
-#include <string.h>
-#include <stdbool.h>
-#include <stdlib.h>
-#include "sql_functions.h"
 #include "IO.h"
 #include "filtro.h"
+#include "sql_functions.h"
+#include <stdbool.h>
+#include <stdio.h>
+#include <string.h>
 
 void select_from()
 {
-    // Lê o nome do arquivo binário
-    char bin_name[41];
-    if (scanf("%s", bin_name) != 1)
+    char bin_name[50];
+
+    FILE *f_bin = open_bin(bin_name, "rb+");
+
+    if (f_bin == NULL)
         return;
 
-    // Tenta abrir o arquivo binário para leitura
-    FILE *p_bin = fopen(bin_name, "rb");
-    if (p_bin == NULL)
+    // Vai para o campo proxRRN do registro de cabeçalho para ler quantos
+    // registros existem
+    int reg_count = 0;
+    fseek(f_bin, 5, SEEK_SET);
+    if (fread(&reg_count, sizeof(int), 1, f_bin) != 1)
     {
         printf("Falha no processamento do arquivo.\n");
+        fclose(f_bin);
         return;
     }
 
-    // Verifica se o status do arquivo é consistente ou seja, se é '1'
-    char status;
-    if (fread(&status, sizeof(char), 1, p_bin) != 1)
-    {
-        printf("Falha no processamento do arquivo.\n");
-        fclose(p_bin);
-        return;
-    }
-    if (status == '0')
-    {
-        printf("Falha no processamento do arquivo.\n");
-        fclose(p_bin);
-        return;
-    }
-
-    // Vai para o 5 byte do cabecalho (proxRRN) para pegar quantos registros existem
-    fseek(p_bin, 5, SEEK_SET);
-    int count_regs = 0;
-    if (fread(&count_regs, sizeof(int), 1, p_bin) != 1)
-    {
-        printf("Falha no processamento do arquivo.\n");
-        fclose(p_bin);
-        return;
-    }
-
-    // Struct registro auxiliar para ler o binario
+    // Struct registro auxiliar para ler o .bin
     REG registro;
 
-    // For que passa por todos os registros gravados no arquivo .bin
-    for (int RRN = 0; RRN < count_regs; RRN++)
+    // Flag para indicar se algum registro foi encontrado
+    bool encontrou = false;
+
+    // Itera pelos registros do .bin
+    for (int RRN = 0; RRN < reg_count; RRN++)
     {
-        // Vai para o primeiro byteoffset do registro de RRN x
-        fseek(p_bin, RRN * 80 + 17, SEEK_SET);
+        // Vai para o byteoffset do registro atual
+        fseek(f_bin, RRN * 80 + 17, SEEK_SET);
 
-        // Lê o registro do arquivo binário para a struct registro
-        read_from_bin(p_bin, &registro);
+        // Lê o registro do .bin para a struct registro
+        read_from_bin(f_bin, &registro);
 
-        // Verifica se o registro está removido , e se estiver não printa
+        // O registro só é impresso se não estiver removido
         if (registro.removido == '0')
-            // print_registro_in_terminal(&registro);
+        {
+            encontrou = true;
             print_registro_in_terminal(&registro);
+        }
     }
 
-    // Caso não haja registros para serem lidos, ou seja, o proxRRN for 0, printa que o registro é inexistente
-    if (count_regs == 0)
+    // Se nenhum registro foi encontrado, o usuário é avisado
+    if (!encontrou)
     {
         printf("Registro inexistente.\n");
     }
 
-    // Fecha os arquivos
-    fclose(p_bin);
-    p_bin = NULL;
-
-    return;
+    // Fecha o arquivo .bin
+    fclose(f_bin);
+    f_bin = NULL;
 }
 
 void select_from_where()
 {
-    // Lê o nome do arquivo binário
-    char bin_name[41];
-    if (scanf("%s", bin_name) != 1)
+    char bin_name[50];
+
+    FILE *f_bin = open_bin(bin_name, "rb+");
+
+    if (f_bin == NULL)
         return;
 
-    // Tenta abrir o arquivo binário para leitura
-    FILE *p_bin = fopen(bin_name, "rb");
-    if (p_bin == NULL)
+    // Vai para o campo proxRRN do registro de cabeçalho para ler quantos
+    // registros existem
+    int reg_count = 0;
+    fseek(f_bin, 5, SEEK_SET);
+    if (fread(&reg_count, sizeof(int), 1, f_bin) != 1)
     {
         printf("Falha no processamento do arquivo.\n");
-        return;
-    }
-
-    // Verifica se o status do arquivo é consistente ou seja, se é '1'
-    char status;
-    if (fread(&status, sizeof(char), 1, p_bin) != 1)
-    {
-        printf("Falha no processamento do arquivo.\n");
-        fclose(p_bin);
-        return;
-    }
-    if (status == '0')
-    {
-        printf("Falha no processamento do arquivo.\n");
-        fclose(p_bin);
+        fclose(f_bin);
         return;
     }
 
@@ -111,93 +83,53 @@ void select_from_where()
     int n;
     if (scanf("%d", &n) != 1)
     {
-        printf("Falha no processamento do arquivo.\n");
-        fclose(p_bin);
+        printf("Entrada inválida.\n");
+        fclose(f_bin);
         return;
     }
 
-    // Loop para ler as consultas e processar cada uma
-    for (int iter = 0; iter < n; iter++)
+    // Itera sobre as consultas
+    for (int i = 0; i < n; i++)
     {
-        // Lê o número de campos a serem pesquisados
-        int m = 0;
-        scanf(" %d", &m);
+        // Struct registro que serve como comparação para filtrar
+        // os registros do arquivo .bin
+        REG filter;
 
-        // Array auxiliar para informar quais campos devem ser pesquisados e comparados com o filtro
-        bool pesquisa[PUBLIC_FIELDS];
-        for (int i = 0; i < PUBLIC_FIELDS; i++) // inicializa o array de pesquisa como false
-            pesquisa[i] = 0;
-
-        // Struct registro auxiliar para ler o binario
-        REG filtro;
-
-        // String auxiliar para ler o valor do campo a ser pesquisado
-        char str[41];
-
-        for (int i = 0; i < m; i++)
-        {
-            // Le o campo a ser pesquisado e coloca em um buffer
-            char field[41];
-            if (scanf(" %s", field) != 1)
-            {
-                printf("Campo não existente.\n");
-                fclose(p_bin);
-                return;
-            }
-            // Joga esse buffer para o "hash" retorna op
-            int op = field_to_index(field);
-            // Verifica se o campo lido é válido, ou seja, se o op retornado é diferente de -1
-            if (op == -1)
-            {
-                printf("Campo não existente.\n");
-                return;
-            }
-
-            // Seta como true a posição do campo a ser pesquisado para saber qual(is) campo(s) comparar com o filtro depois
-            pesquisa[op] = true;
-
-            // Limpa o buffer
-            str[0] = '\0';
-
-            // Le o valor do campo a ser pesquisado e coloca no buffer
-            ScanQuoteString(str);
-            // Coloca no registro filtro os valores lidos para comparar com os registros do arquivo binário depois
-            set_filtro(&filtro, op, str);
-        }
-
-        // Vai para o 5 byte do cabecalho (proxRRN) para pegar quantos registros existem
-        fseek(p_bin, 5, SEEK_SET);
-        int count_regs = 0;
-        fread(&count_regs, sizeof(int), 1, p_bin);
-
-        // Struct registro auxiliar para ler o binario
-        REG registro;
-
+        // Flag para indicar se algum registro foi encontrado
         bool encontrou = false;
 
-        // For que passa por todos os registros gravados no arquivo .bin
-        for (int RRN = 0; RRN < count_regs; RRN++)
+        // Array auxiliar para informar quais campos devem ser pesquisados e
+        // comparados com o filtro
+        bool search[PUBLIC_FIELDS];
+
+        filter_build(&filter, search);
+
+        // Struct registro auxiliar para ler o .bin
+        REG registro;
+
+        // Itera pelos registros do .bin
+        for (int RRN = 0; RRN < reg_count; RRN++)
         {
-            // Vai para o primeiro byteoffset do registro de RRN x
-            fseek(p_bin, RRN * 80 + 17, SEEK_SET);
+            // Vai para o byteoffset do registro atual
+            fseek(f_bin, RRN * 80 + 17, SEEK_SET);
 
-            // Lê o registro do arquivo binário para a struct registro
-            read_from_bin(p_bin, &registro);
+            // Lê o registro do .bin para a struct registro
+            read_from_bin(f_bin, &registro);
 
-            // Verifica se o registro está removido , e se estiver não printa
-            if (registro.removido == '0')
+            // Se o registro está removido ele não é selecionado
+            if (registro.removido == '1')
+                continue;
+
+            // Se o registro passa pelo filtro ele é impresso
+            if (match_filter(&registro, search, &filter))
             {
-                if (match_filtro(&registro, pesquisa, &filtro))
-                {
-                    // Printa o registro no terminal caso ele bata com o filtro e seta encontrou como true para no final verificar se pelo menos um registro bateu com o filtro
-                    print_registro_in_terminal(&registro);
-                    encontrou = true;
-                }
+                encontrou = true;
+                print_registro_in_terminal(&registro);
             }
         }
 
-        // Verifica se encontrou algum registro que bateu com o filtro ou se nao havia registros para serem lidos
-        if (count_regs == 0 || !encontrou)
+        // Se nenhum registro foi encontrado, o usuário é avisado
+        if (!encontrou)
         {
             printf("Registro inexistente.\n");
         }
@@ -206,7 +138,7 @@ void select_from_where()
         printf("\n");
     }
 
-    // Fecha os arquivos
-    fclose(p_bin);
-    p_bin = NULL;
+    // Fecha o arquivo .bin
+    fclose(f_bin);
+    f_bin = NULL;
 }

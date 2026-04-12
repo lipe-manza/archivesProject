@@ -1,2 +1,3 @@
 *.o
 program
+.clang-format

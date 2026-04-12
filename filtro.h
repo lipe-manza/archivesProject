@@ -1,12 +1,12 @@
 #ifndef FILTRO_H
 #define FILTRO_H
 
-#include <stdbool.h>
 #include "registro.h"
+#include <stdbool.h>
 #define PUBLIC_FIELDS 8
 
 /*
-Campos do registro (índices): para a pesquisa[] e op
+Campos do registro (índices): para a search[] e field
 [0]  codEstacao
 [1]  codLinha
 [2]  codProxEstacao
@@ -17,12 +17,10 @@ Campos do registro (índices): para a pesquisa[] e op
 [7]  nomeLinha
 */
 
-
 int field_to_index(char *str);
 
-void set_filtro(REG *filtro, int op, char *str);
+void filter_build(REG *filter, bool search[]);
 
-bool match_filtro(REG *reg, bool pesquisa[], REG *filtro);
-
+bool match_filter(REG *reg, bool search[], REG *filter);
 
 #endif

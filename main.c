@@ -1,9 +1,9 @@
 // Luiz Felipe Manzoli Franceschini - 16913300
 // Enzo Trulenque Evangelista - 15819219
 
-#include <stdio.h>
+#include "debug.h"
 #include "sql_functions.h"
-#include "IO.h"
+#include <stdio.h>
 
 int main()
 {
@@ -28,10 +28,16 @@ int main()
         delete_from_where();
         break;
     case 5: // INSERT INTO
-        insert_from_where();
+        insert_into();
         break;
     case 6: // UPDATE SET WHERE
         update_set_where();
+        break;
+    case -1: // COMPARA BIN
+        compara_bin();
+        break;
+    case -2: // PRINT CABEÇALHO
+        print_cabecalho();
         break;
     }
 

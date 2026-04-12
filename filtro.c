@@ -1,12 +1,15 @@
-#include <stdio.h>
-#include <string.h>
-#include <stdbool.h>
 #include "filtro.h"
+#include "IO.h"
+#include <stdbool.h>
+#include <string.h>
 
-// Função auxiliar "hash" para converter o nome do campo em um inteiro representando o campo
+// Função auxiliar "hash" para converter o nome do campo em um inteiro
+// representando o campo
 int field_to_index(char *str)
 {
-    char *fields[] = {"codEstacao", "codLinha", "codProxEstacao", "distProxEstacao", "codLinhaIntegra", "codEstIntegra", "nomeEstacao", "nomeLinha"};
+    char *fields[] = {"codEstacao",      "codLinha",        "codProxEstacao",
+                      "distProxEstacao", "codLinhaIntegra", "codEstIntegra",
+                      "nomeEstacao",     "nomeLinha"};
 
     for (int i = 0; i < PUBLIC_FIELDS; i++)
     {
@@ -14,46 +17,97 @@ int field_to_index(char *str)
             return i;
     }
 
-    // Se o campo não for encontrado retorna -1 para indicar que o campo é inválido
+    // Se o campo não for encontrado retorna -1 para indicar que o campo é
+    // inválido
     return -1;
 }
 
-// Função para setar os campos do filtro de acordo com o campo a ser pesquisado e o valor lido do terminal
-void set_filtro(REG *filtro, int op, char *str)
+// Função para setar os campos do filtro de acordo com o campo a ser pesquisado
+// e o valor lido do terminal
+void set_filter_field(REG *filter, int field, char *field_val)
 {
-    switch (op)
+    switch (field)
     {
     case 0:
-        filtro->codEstacao = (strlen(str) == 0) ? -1 : atoi(str);
+        filter->codEstacao = satoi(field_val, -1);
         break;
     case 1:
-        filtro->codLinha = (strlen(str) == 0) ? -1 : atoi(str);
+        filter->codLinha = satoi(field_val, -1);
         break;
     case 2:
-        filtro->codProxEstacao = (strlen(str) == 0) ? -1 : atoi(str);
+        filter->codProxEstacao = satoi(field_val, -1);
         break;
     case 3:
-        filtro->distProxEstacao = (strlen(str) == 0) ? -1 : atoi(str);
+        filter->distProxEstacao = satoi(field_val, -1);
         break;
     case 4:
-        filtro->codLinhaIntegra = (strlen(str) == 0) ? -1 : atoi(str);
+        filter->codLinhaIntegra = satoi(field_val, -1);
         break;
     case 5:
-        filtro->codEstIntegra = (strlen(str) == 0) ? -1 : atoi(str);
+        filter->codEstIntegra = satoi(field_val, -1);
         break;
     case 6:
-        filtro->tamNomeEstacao = strlen(str);
-        strcpy(filtro->nomeEstacao, str);
+        filter->tamNomeEstacao = strlen(field_val);
+        strcpy(filter->nomeEstacao, field_val);
         break;
     case 7:
-        filtro->tamNomeLinha = strlen(str);
-        strcpy(filtro->nomeLinha, str);
+        filter->tamNomeLinha = strlen(field_val);
+        strcpy(filter->nomeLinha, field_val);
         break;
     }
 }
 
-// Função para comparar um registro lido do arquivo binário com o filtro de pesquisa, retornando true se o registro corresponde ao filtro e false caso contrário
-bool match_filtro(REG *reg, bool pesquisa[], REG *filtro)
+void filter_build(REG *filter, bool search[])
+{
+    // Lê o número de campos a serem pesquisados
+    int m = 0;
+    scanf(" %d", &m);
+
+    // Inicializa todas as posições como falso
+    memset(search, false, PUBLIC_FIELDS * sizeof(bool));
+
+    for (int j = 0; j < m; j++)
+    {
+        // Lê o campo a ser pesquisado e coloca em um buffer
+        char field[41];
+        if (scanf(" %s", field) != 1)
+        {
+            printf("Falha na leitura do campo.\n");
+            return;
+        }
+
+        // Guarda um índice referente ao campo atual
+        int field_idx = field_to_index(field);
+
+        // Verifica se o campo lido é válido
+        if (field_idx == -1)
+        {
+            printf("Campo não existente.\n");
+            return;
+        }
+
+        // Marca que o campo fornecido será usado na pesquisa
+        search[field_idx] = true;
+
+        // String auxiliar para ler o valor do campo a ser pesquisado
+        char field_val[41];
+
+        // Limpa o buffer
+        memset(field_val, '\0', sizeof(field_val));
+
+        // Lê o valor do campo a ser pesquisado e coloca no buffer
+        ScanQuoteString(field_val);
+
+        // Coloca no registro filtro os valores lidos para comparar com os
+        // registros do arquivo binário depois
+        set_filter_field(filter, field_idx, field_val);
+    }
+}
+
+// Função para comparar um registro lido do arquivo binário com o filtro de
+// pesquisa, retornando true se o registro corresponde ao filtro e false caso
+// contrário
+bool match_filter(REG *reg, bool pesquisa[], REG *filtro)
 {
     for (int i = 0; i < PUBLIC_FIELDS; i++)
     {

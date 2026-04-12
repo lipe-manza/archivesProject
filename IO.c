@@ -1,9 +1,47 @@
-#include <stdio.h>
-#include <string.h>
-#include <stdbool.h>
-#include <stdlib.h>
-#include <ctype.h>
 #include "IO.h"
+#include <ctype.h>
+#include <stdbool.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+// Abre o arquivo binário
+FILE *open_bin(char *bin_name, char *mode)
+{
+    // Lê o nome do arquivo binário
+    if (scanf("%s", bin_name) != 1)
+        return NULL;
+
+    // Tenta abrir o arquivo binário para leitura
+    FILE *f_bin = fopen(bin_name, mode);
+    if (f_bin == NULL)
+    {
+        printf("Falha no processamento do arquivo.\n");
+        return NULL;
+    }
+
+    // Lê o status do arquivo
+    char status;
+    if (fread(&status, sizeof(char), 1, f_bin) != 1)
+    {
+        printf("Falha no processamento do arquivo.\n");
+        fclose(f_bin);
+        return NULL;
+    }
+
+    // Se for '0' está inconsistente
+    if (status == '0')
+    {
+        printf("Falha no processamento do arquivo.\n");
+        fclose(f_bin);
+        return NULL;
+    }
+
+    // Volta para o início do arquivo
+    fseek(f_bin, 0, SEEK_SET);
+
+    return f_bin;
+}
 
 void print_registro_in_terminal_csv(REG *registro)
 {
@@ -94,7 +132,6 @@ void print_registro_in_terminal(REG *registro)
 
     printf("\n");
 }
-
 
 /*
  * Você não precisa entender o código dessa função.
@@ -231,4 +268,9 @@ void read_new_registro_from_terminal(REG *new_registro)
     return;
 }
 
-
+// Se a string não for vazia, retorna o atoi
+// Caso contrário retorna o valor padrão fornecido
+int satoi(char *string, int val)
+{
+    return strlen(string) > 0 ? atoi(string) : val;
+}
