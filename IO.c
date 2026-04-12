@@ -8,10 +8,6 @@
 // Abre o arquivo binário
 FILE *open_bin(char *bin_name, char *mode)
 {
-    // Lê o nome do arquivo binário
-    if (scanf("%s", bin_name) != 1)
-        return NULL;
-
     // Tenta abrir o arquivo binário para leitura
     FILE *f_bin = fopen(bin_name, mode);
     if (f_bin == NULL)

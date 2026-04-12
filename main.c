@@ -1,7 +1,6 @@
 // Luiz Felipe Manzoli Franceschini - 16913300
 // Enzo Trulenque Evangelista - 15819219
 
-#include "debug.h"
 #include "sql_functions.h"
 #include <stdio.h>
 
@@ -33,11 +32,8 @@ int main()
     case 6: // UPDATE SET WHERE
         update_set_where();
         break;
-    case -1: // COMPARA BIN
-        compara_bin();
-        break;
-    case -2: // PRINT CABEÇALHO
-        print_cabecalho();
+    default:
+        printf("Operação inválida.\n");
         break;
     }
 

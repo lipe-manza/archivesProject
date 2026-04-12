@@ -87,41 +87,36 @@ void write_in_bin(FILE *f_bin, REG *reg)
     }
 }
 
-void atualizar_registro(REG *atualizado, bool atualizar[], int RRN, FILE *f_bin)
+void atualizar_registro(REG *registro, REG *atualizado, bool atualizar[], int RRN, FILE *f_bin)
 {
-    // Lê o registro a ser atualizado
-    fseek(f_bin, 17 + (RRN * 80), SEEK_SET);
-    REG registro;
-    read_from_bin(f_bin, &registro);
-
     // Atualiza os campos do registro de acordo com o array atualizar
     if (atualizar[0])
-        registro.codEstacao = atualizado->codEstacao;
+        registro->codEstacao = atualizado->codEstacao;
     if (atualizar[1])
-        registro.codLinha = atualizado->codLinha;
+        registro->codLinha = atualizado->codLinha;
     if (atualizar[2])
-        registro.codProxEstacao = atualizado->codProxEstacao;
+        registro->codProxEstacao = atualizado->codProxEstacao;
     if (atualizar[3])
-        registro.distProxEstacao = atualizado->distProxEstacao;
+        registro->distProxEstacao = atualizado->distProxEstacao;
     if (atualizar[4])
-        registro.codLinhaIntegra = atualizado->codLinhaIntegra;
+        registro->codLinhaIntegra = atualizado->codLinhaIntegra;
     if (atualizar[5])
-        registro.codEstIntegra = atualizado->codEstIntegra;
+        registro->codEstIntegra = atualizado->codEstIntegra;
 
     if (atualizar[6])
     {
-        registro.tamNomeEstacao = atualizado->tamNomeEstacao;
-        strcpy(registro.nomeEstacao, atualizado->nomeEstacao);
+        registro->tamNomeEstacao = atualizado->tamNomeEstacao;
+        strcpy(registro->nomeEstacao, atualizado->nomeEstacao);
     }
     if (atualizar[7])
     {
-        registro.tamNomeLinha = atualizado->tamNomeLinha;
-        strcpy(registro.nomeLinha, atualizado->nomeLinha);
+        registro->tamNomeLinha = atualizado->tamNomeLinha;
+        strcpy(registro->nomeLinha, atualizado->nomeLinha);
     }
 
     // Sobrescreve o registro atualizado no arquivo .bin
     fseek(f_bin, 17 + (RRN * 80), SEEK_SET);
-    write_in_bin(f_bin, &registro);
+    write_in_bin(f_bin, registro);
 }
 
 bool atualizar_estacoes(FILE *f_bin)

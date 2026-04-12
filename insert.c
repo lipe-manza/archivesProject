@@ -5,10 +5,18 @@
 
 void insert_into()
 {
+    // Váriavel auxiliar para ler o nome dor arquivo
     char bin_name[50];
+    // Lê o nome do arquivo binário
+    if (scanf("%s", bin_name) != 1)
+    {
+        printf("Falha na leitura do nome do arquivo.\n");
+        return;
+    }
 
+    // Abre o arquivo .bin para leitura e escrita e verifica se a abertura
+    // foi bem sucedida conferindo o status do arquivo
     FILE *f_bin = open_bin(bin_name, "rb+");
-
     if (f_bin == NULL)
         return;
 

@@ -1,3 +1,5 @@
 *.o
-program
+programTrab
 .clang-format
+.zip
+

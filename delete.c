@@ -6,10 +6,18 @@
 
 void delete_from_where()
 {
+    // Váriavel auxiliar para ler o nome dor arquivo
     char bin_name[50];
 
-    FILE *f_bin = open_bin(bin_name, "rb+");
+    // Lê o nome do arquivo binário
+    if (scanf("%s", bin_name) != 1){
+        printf("Falha na leitura do nome do arquivo.\n");
+        return;
+    }
 
+    // Abre o arquivo .bin para leitura e escrita e verifica se a abertura
+    // foi bem sucedida conferindo o status do arquivo
+    FILE *f_bin = open_bin(bin_name, "rb+");
     if (f_bin == NULL)
         return;
 
@@ -49,6 +57,7 @@ void delete_from_where()
         // comparados com o filtro
         bool search[PUBLIC_FIELDS];
 
+        //
         filter_build(&filter, search);
 
         // Struct registro auxiliar para ler o binario

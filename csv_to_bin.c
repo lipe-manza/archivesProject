@@ -7,22 +7,10 @@
 #include <string.h>
 
 // Função auxiliar para fechar os arquivos
-void close_files(FILE *f_bin, FILE *f_csv)
-{
-    if (f_bin)
-        fclose(f_bin);
-    if (f_csv)
-        fclose(f_csv);
-}
+void close_files(FILE *f_bin, FILE *f_csv);
 
 // Função auxiliar para liberar a memória das hash tables
-void free_tables(HashEstacao *hash_single, HashPar *hash_pair)
-{
-    if (hash_single)
-        free_hash_estacao(hash_single);
-    if (hash_pair)
-        free_hash_par(hash_pair);
-}
+void free_tables(HashEstacao *hash_single, HashPar *hash_pair);
 
 // Função principal para converter o arquivo .csv para .bin
 void csv_to_bin()
@@ -102,7 +90,7 @@ void csv_to_bin()
         // vírgula como delimitador
 
         // Transforma o primeiro token (código da estação) de string para
-        // inteiro E salva no registro auxiliar
+        // inteiro e salva no registro auxiliar
         token = strsep(&p, ",");
         if (token == NULL)
         {
@@ -115,7 +103,7 @@ void csv_to_bin()
         registro.codEstacao = satoi(token, -1);
 
         // Processa o segundo token (nome da estação)
-        // E salva o tamanho e a string no registro auxiliar
+        // e salva o tamanho e a string no registro auxiliar
         token = strsep(&p, ",");
         if (token == NULL)
         {
@@ -129,7 +117,7 @@ void csv_to_bin()
         strcpy(registro.nomeEstacao, token);
 
         // Transforma o terceiro token (código da linha) de string para inteiro
-        // E salva no registro auxiliar
+        // e salva no registro auxiliar
         token = strsep(&p, ",");
         if (token == NULL)
         {
@@ -142,7 +130,7 @@ void csv_to_bin()
         registro.codLinha = satoi(token, -1);
 
         // Processa o quarto token (nome da linha)
-        // E salva o tamanho e a string no registro auxiliar
+        // e salva o tamanho e a string no registro auxiliar
         token = strsep(&p, ",");
         if (token == NULL)
         {
@@ -156,7 +144,7 @@ void csv_to_bin()
         }
 
         // Transforma o quinto token (código da próxima estação) de string para
-        // inteiro E salva no registro auxiliar
+        // inteiro e salva no registro auxiliar
         token = strsep(&p, ",");
         if (token == NULL)
         {
@@ -169,7 +157,7 @@ void csv_to_bin()
         registro.codProxEstacao = satoi(token, -1);
 
         // Transforma o sexto token (distância para a próxima estação) de string
-        // para inteiro E salva no registro auxiliar
+        // para inteiro e salva no registro auxiliar
         token = strsep(&p, ",");
         if (token == NULL)
         {
@@ -250,4 +238,22 @@ void csv_to_bin()
     BinarioNaTela(bin_name);
 
     return;
+}
+
+// Função auxiliar para fechar os arquivos
+void close_files(FILE *f_bin, FILE *f_csv)
+{
+    if (f_bin)
+        fclose(f_bin);
+    if (f_csv)
+        fclose(f_csv);
+}
+
+// Função auxiliar para liberar a memória das hash tables
+void free_tables(HashEstacao *hash_single, HashPar *hash_pair)
+{
+    if (hash_single)
+        free_hash_estacao(hash_single);
+    if (hash_pair)
+        free_hash_par(hash_pair);
 }
