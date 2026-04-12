@@ -16,9 +16,9 @@ void select_from()
         return;
     }
 
-    // Abre o arquivo .bin para leitura e escrita e verifica se a abertura
+    // Abre o arquivo .bin para leitura e verifica se a abertura
     // foi bem sucedida conferindo o status do arquivo
-    FILE *f_bin = open_bin(bin_name, "rb+");
+    FILE *f_bin = open_bin(bin_name, "rb");
 
     if (f_bin == NULL)
         return;
@@ -78,9 +78,9 @@ void select_from_where()
         return;
     }
 
-    // Abre o arquivo .bin para leitura e escrita e verifica se a abertura
+    // Abre o arquivo .bin para leitura e verifica se a abertura
     // foi bem sucedida conferindo o status do arquivo
-    FILE *f_bin = open_bin(bin_name, "rb+");
+    FILE *f_bin = open_bin(bin_name, "rb");
     if (f_bin == NULL)
         return;
 
@@ -118,7 +118,8 @@ void select_from_where()
         // comparados com o filtro
         bool search[PUBLIC_FIELDS];
 
-        // Preenche a struct filter e o array search com os valores do filtro de pesquisa
+        // Preenche a struct filter com os valores do filtro de pesquisa
+        // e o array search com os campos a serem comparados
         filter_build(&filter, search);
 
         // Struct registro auxiliar para ler o .bin

@@ -39,51 +39,6 @@ FILE *open_bin(char *bin_name, char *mode)
     return f_bin;
 }
 
-void print_registro_in_terminal_csv(REG *registro)
-{
-    // Nao podem ser nulos
-    printf("%d,", registro->codEstacao);
-    printf("%s,", registro->nomeEstacao);
-
-    // Código da Linha
-    if (registro->codLinha == -1)
-        printf("NULO,");
-    else
-        printf("%d,", registro->codLinha);
-
-    // Nome da Linha
-    if (registro->tamNomeLinha == 0)
-        printf("NULO,");
-    else
-        printf("%s,", registro->nomeLinha);
-
-    // Código da próxima estação
-    if (registro->codProxEstacao == -1)
-        printf("NULO,");
-    else
-        printf("%d,", registro->codProxEstacao);
-
-    // Distância da próxima estação
-    if (registro->distProxEstacao == -1)
-        printf("NULO,");
-    else
-        printf("%d,", registro->distProxEstacao);
-
-    // Código da linha integrante
-    if (registro->codLinhaIntegra == -1)
-        printf("NULO,");
-    else
-        printf("%d,", registro->codLinhaIntegra);
-
-    // Código da Estação que faz a integrante
-    if (registro->codEstIntegra == -1)
-        printf("NULO");
-    else
-        printf("%d", registro->codEstIntegra);
-
-    printf("\n");
-}
-
 void print_registro_in_terminal(REG *registro)
 {
     // Nao podem ser nulos
