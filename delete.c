@@ -57,7 +57,7 @@ void delete_from_where()
         // comparados com o filtro
         bool search[PUBLIC_FIELDS];
 
-        //
+        // Preenche a struct filter e o array search com os valores do filtro de pesquisa
         filter_build(&filter, search);
 
         // Struct registro auxiliar para ler o binario
