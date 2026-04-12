@@ -1,6 +1,4 @@
 #include "registro.h"
-#include "IO.h"
-#include "filtro.h"
 #include "hash_tables.h"
 #include <stdbool.h>
 #include <stdio.h>
