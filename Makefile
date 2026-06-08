@@ -1,9 +1,8 @@
-
 all:
-	gcc -o programTrab *.c -lm
-
+	gcc -o programTrab src/*.c -Iheaders -lm
 
 run:
 	./programTrab
 
-
+clean:
+	rm -f programTrab

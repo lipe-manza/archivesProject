@@ -1,7 +1,7 @@
 #ifndef FILTRO_H
 #define FILTRO_H
 
-#include "registro.h"
+#include "../headers/registro.h"
 #include <stdbool.h>
 #define PUBLIC_FIELDS 8
 

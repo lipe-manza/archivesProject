@@ -2,4 +2,5 @@
 programTrab
 .clang-format
 .zip
-
+.bin
+.vscode
