@@ -10,5 +10,6 @@ void select_from_where();
 void delete_from_where();
 void insert_into();
 void update_set_where();
+void create_index();
 
 #endif

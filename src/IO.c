@@ -7,7 +7,7 @@
 #include "../headers/IO.h"
 
 FILE *open_bin(char *bin_name, char *mode) {
-  // Tenta abrir o arquivo binário para leitura
+  // Tenta abrir o arquivo binário para mode
   FILE *f_bin = fopen(bin_name, mode);
   if (f_bin == NULL) {
     printf("Falha no processamento do arquivo.\n");
@@ -27,6 +27,16 @@ FILE *open_bin(char *bin_name, char *mode) {
     printf("Falha no processamento do arquivo.\n");
     fclose(f_bin);
     return NULL;
+  }
+
+  // Verifica se o arquivo foi aberto para escrita
+  // Se foi determina o arquivo como instavel
+  if (strcmp(mode, "rb+") == 0) {
+    status = '0';
+
+    fseek(f_bin, 0, SEEK_SET);
+    fwrite(&status, sizeof(char), 1, f_bin);
+    fflush(f_bin);
   }
 
   // Volta para o início do arquivo
