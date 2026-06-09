@@ -48,11 +48,33 @@ void csv_to_bin() {
     return;
   }
 
-  // Move o ponteiro de arquivo para o byte TAM_CABECALHO, logo após o registro
-  // de cabeçalho
-  fseek(f_bin, TAM_CABECALHO, SEEK_SET);
+  // Escrita do registro de cabeçalho inicializacao
 
+  // Aponta para o inicio do arquivo binário e escreve o status como
+  // inconsistente pois o arquivo esta sendo escrito
+  fseek(f_bin, 0, SEEK_SET);
+  char status = '0';
+  fwrite(&status, sizeof(char), 1, f_bin);
+
+  // Aponta para o topo da lista de removidos e escreve o valor -1, indicando
+  // que não há registros removidos
+  int aux = -1;
+  fwrite(&aux, sizeof(int), 1, f_bin);
+
+  // Escreve o próximo RRN = -1
+  fwrite(&aux, sizeof(int), 1, f_bin);
+
+  aux = 0;
+
+  // Escreve o número de estações únicas como 0
+  fwrite(&aux, sizeof(int), 1, f_bin);
+
+  // Escreve o número de pares únicos de estações como 0
+  fwrite(&aux, sizeof(int), 1, f_bin);
+
+  // Variaveis auxiliares
   char buffer[256];
+
   REG registro;
   int reg_count = 0;
 
@@ -191,13 +213,10 @@ void csv_to_bin() {
   // Aponta para o inicio do arquivo binário e escreve o status como
   // consistente pois o arquivo foi escrito com sucesso
   fseek(f_bin, 0, SEEK_SET);
-  char status = '1';
+  status = '1';
   fwrite(&status, sizeof(char), 1, f_bin);
-
-  // Aponta para o topo da lista de removidos e escreve o valor -1, indicando
-  // que não há registros removidos
-  int topo = -1;
-  fwrite(&topo, sizeof(int), 1, f_bin);
+  // Pula o topo ja que ja foi escrito
+  fseek(f_bin, sizeof(int), SEEK_CUR);
 
   // Escreve o próximo RRN
   fwrite(&reg_count, sizeof(int), 1, f_bin);

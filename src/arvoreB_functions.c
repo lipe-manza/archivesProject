@@ -2,22 +2,20 @@
 
 #include "../headers/arvoreB.h"
 
-void search_key(FILE *p_bin, int *pos_key, int *tipo_no, int *RRN_child_pos,
-                int key) {
-
-  // Pula o removido e o proxRRN ja que nunca vai ter um removido na busca
-  fseek(p_bin, 5, SEEK_CUR);
+int search_key(FILE *p_bin, NO_AB *no, int key) {
+  // Le se o no ta removido, impossivel estar na busca
+  fread(&no->removido, sizeof(int), 1, p_bin);
+  // Le o proximo no da pilha
+  fread(&no->proximo, sizeof(int), 1, p_bin);
   // Le o tipo do no
-  int tipo_no = -1;
-  fread(&tipo_no, sizeof(int), p_bin);
+  fread(&no->tipoNo, sizeof(int), 1, p_bin);
   // Le o numero de chaves
-  int nroChaves = 0;
-  fread(&nroChaves, sizeof(int), p_bin);
-  int key_atual = 0;
-  for (int i = 0; i < nroChaves; i++) {
-    fread(&key_atual, sizeof(int), p_bin);
+  fread(&no->nroChaves, sizeof(int), 1, p_bin);
+  int index = -1;
+  for (int i = 0; i < no->nroChaves; i++) {
+    fread(no->chaves[i], sizeof(int), 1, p_bin);
     if (key_atual == key) {
-      *pos_key = i + 1;
+      *pos_key = i;
       break;
     } else if (key_atual > key) {
     }

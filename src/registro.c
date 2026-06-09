@@ -13,6 +13,11 @@ bool read_from_bin(FILE *p_bin, REG *reg) {
 
   if (fread(&reg->removido, sizeof(reg->removido), 1, p_bin) != 1)
     return false;
+  // Caso o registro esteja marcado como removido , pular
+  if (reg->removido == '1') {
+    fseek(p_bin, TAM_REGISTRO - 1, SEEK_CUR);
+    return true;
+  }
   if (fread(&reg->proximo, sizeof(reg->proximo), 1, p_bin) != 1)
     return false;
   if (fread(&reg->codEstacao, sizeof(reg->codEstacao), 1, p_bin) != 1)

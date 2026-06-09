@@ -1,6 +1,5 @@
 #include <stdbool.h>
 #include <stdio.h>
-#include <string.h>
 
 #include "../headers/IO.h"
 #include "../headers/filtro.h"

@@ -10,7 +10,7 @@
 #define POS_PROX_RRN_AB 9
 #define ORDEM_AB 4
 
-/*typedef struct no_ab {
+typedef struct no_ab {
   char removido; // 1 = removido; 0 = nao removido
   int proximo;
   int tipoNo;
@@ -20,6 +20,5 @@
   int ponteiroNo[ORDEM_AB];
 
 } NO_AB;
-*/
 
 #endif
