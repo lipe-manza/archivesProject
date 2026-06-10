@@ -42,7 +42,7 @@ typedef struct page {
   int pageType;
   int numOfKeys;
   int keys[MAX_KEYS_PER_PAGE_B_TREE];
-  int archivePointer[MAX_KEYS_PER_PAGE_B_TREE];
+  int filePointer[MAX_KEYS_PER_PAGE_B_TREE];
   int childPointer[MAX_CHILDREN_B_TREE];
 
 } PAGE;
@@ -57,7 +57,7 @@ bool get_B_tree_page(FILE *f_arvore_B, PAGE *page, int RRN);
 bool find_key_in_page(FILE *f_arvore_B, int key, int RRN, int *supost_position);
 
 /* acesso direto */
-int get_archivePointer_value_from_key(FILE *f_arvore_B, int key, int RRN,
-                                      int index);
+int get_filePointer_value_from_key(FILE *f_arvore_B, int key, int RRN,
+                                   int index);
 
 #endif
