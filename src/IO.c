@@ -7,30 +7,48 @@
 #include "../headers/IO.h"
 
 FILE *open_bin(char *bin_name, char *mode) {
-  // Tenta abrir o arquivo binário para leitura
+  // Tenta abrir o arquivo binário para mode
   FILE *f_bin = fopen(bin_name, mode);
-  if (f_bin == NULL) {
-    printf("Falha no processamento do arquivo.\n");
-    return NULL;
+
+  // Trata do caso de criação de um arquivo binário
+  if (strcmp(mode, "wb") == 0) {
+    if (f_bin == NULL) {
+      printf("Falha na criação do arquivo.\n");
+      return NULL;
+    }
+  }
+  // Caso de leitura e escrita binária
+  else if (strcmp(mode, "rb+") == 0) {
+    if (f_bin == NULL) {
+      printf("Falha no processamento do arquivo.\n");
+      return NULL;
+    }
+
+    // Lê o status do arquivo
+    char status;
+    if (fread(&status, sizeof(char), 1, f_bin) != 1) {
+      printf("Falha no processamento do arquivo.\n");
+      fclose(f_bin);
+      return NULL;
+    }
+
+    // Se for '0' está inconsistente
+    if (status == '0') {
+      printf("Falha no processamento do arquivo.\n");
+      fclose(f_bin);
+      return NULL;
+    }
   }
 
-  // Lê o status do arquivo
-  char status;
-  if (fread(&status, sizeof(char), 1, f_bin) != 1) {
-    printf("Falha no processamento do arquivo.\n");
-    fclose(f_bin);
-    return NULL;
-  }
+  // Define o arquivo como inconsistente
+  char status = '0';
 
-  // Se for '0' está inconsistente
-  if (status == '0') {
-    printf("Falha no processamento do arquivo.\n");
-    fclose(f_bin);
-    return NULL;
-  }
+  fseek(f_bin, 0, SEEK_SET);
+  fwrite(&status, sizeof(char), 1, f_bin);
+  fflush(f_bin);
 
   // Volta para o início do arquivo
-  fseek(f_bin, 0, SEEK_SET);
+  // fseek(f_bin, 0, SEEK_SET);
 
   return f_bin;
 }

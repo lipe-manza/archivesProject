@@ -13,6 +13,11 @@ bool read_from_bin(FILE *p_bin, REG *reg) {
 
   if (fread(&reg->removido, sizeof(reg->removido), 1, p_bin) != 1)
     return false;
+  // Caso o registro esteja marcado como removido, pular
+  if (reg->removido == '1') {
+    fseek(p_bin, TAM_REGISTRO - 1, SEEK_CUR);
+    return true;
+  }
   if (fread(&reg->proximo, sizeof(reg->proximo), 1, p_bin) != 1)
     return false;
   if (fread(&reg->codEstacao, sizeof(reg->codEstacao), 1, p_bin) != 1)
@@ -95,8 +100,8 @@ void write_in_bin(FILE *f_bin, REG *reg) {
   }
 }
 
-void atualizar_registro(REG *registro, REG *atualizado, bool atualizar[],
-                        int RRN, FILE *f_bin) {
+void atualizar_registro(FILE *f_bin, int RRN, REG *registro, bool atualizar[],
+                        REG *atualizado) {
   // Atualiza os campos do registro de acordo com o array atualizar
   if (atualizar[0])
     registro->codEstacao = atualizado->codEstacao;

@@ -27,8 +27,8 @@ typedef struct registro {
 
 bool read_from_bin(FILE *p_bin, REG *reg);
 void write_in_bin(FILE *p_bin, REG *reg);
-void atualizar_registro(REG *registro, REG *atualizado, bool atualizar[],
-                        int RRN, FILE *p_bin);
+void update_bin(FILE *f_bin, int RRN, REG *registro, bool atualizar[],
+                REG *atualizado);
 bool atualizar_estacoes(FILE *p_bin);
 
 #endif

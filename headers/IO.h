@@ -1,7 +1,7 @@
 #ifndef IO_H
 #define IO_H
 
-#include "registro.h"
+#include "../headers/registro.h"
 
 FILE *open_bin(char *bin_name, char *mode);
 
