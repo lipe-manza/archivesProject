@@ -37,8 +37,8 @@ bool get_B_tree_page(FILE *f_arvore_B, PAGE *page, int RRN) {
   return true;
 }
 
-int get_archivePointer_value_from_key(FILE *f_arvore_B, int key, int RRN,
-                                      int index) {
+int get_filePointer_value_from_key(FILE *f_arvore_B, int key, int RRN,
+                                   int index) {
   // Verifica se o index e maior que o limite de chaves
   if (index >= MAX_CHILDREN_B_TREE)
     return -1;
