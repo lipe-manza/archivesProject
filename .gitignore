@@ -1,6 +1,6 @@
 *.o
 programTrab
 .clang-format
-.zip
-.bin
-.vscode
+*.zip
+*.bin
+.vscode/
