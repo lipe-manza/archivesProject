@@ -6,6 +6,25 @@
 #include "../headers/registro.h"
 #include "../headers/sql_functions.h"
 
+void update_loop(FILE *f_bin, int reg_count, bool *search, REG *filter,
+                 bool *update, REG *updated) {
+  // Struct registro auxiliar para ler o binário
+  REG registro;
+
+  // Itera pelos registros do .bin
+  for (int RRN = 0; RRN < reg_count; RRN++) {
+    // Lê o registro do .bin para a struct registro
+    read_from_bin(f_bin, &registro);
+
+    // Se o registro está removido ele é pulado
+    if (registro.removido == '1')
+      continue;
+
+    if (match_filter(&registro, search, filter))
+      update_bin(f_bin, RRN, &registro, update, updated);
+  }
+}
+
 void update_set_where() {
   // Variável para guardar o nome do arquivo .bin
   char bin_name[50];
@@ -23,11 +42,6 @@ void update_set_where() {
     printf("Falha no processamento do arquivo.\n");
     return;
   }
-
-  // Define o arquivo binário como inconsistente no registro de cabeçalho
-  // durante a escrita
-  char status = '0';
-  fwrite(&status, sizeof(char), 1, f_bin);
 
   // Vai para o campo proxRRN do registro de cabeçalho para ler quantos
   // registros existem
@@ -67,25 +81,6 @@ void update_set_where() {
     // Preenche a struct updated e o array update com os valores a serem
     // atualizados
     filter_build(&updated, update);
-
-    // Struct registro auxiliar para ler o binario
-    REG registro;
-
-    // Itera pelos registros do .bin
-    for (int RRN = 0; RRN < reg_count; RRN++) {
-      // Vai para o byteoffset do registro atual
-      fseek(f_bin, RRN * TAM_REGISTRO + TAM_CABECALHO, SEEK_SET);
-
-      // Lê o registro do .bin para a struct registro
-      read_from_bin(f_bin, &registro);
-
-      // Se o registro está removido ele é pulado
-      if (registro.removido == '1')
-        continue;
-
-      if (match_filter(&registro, search, &filter))
-        atualizar_registro(&registro, &updated, update, RRN, f_bin);
-    }
   }
 
   // Atualiza o número de estações e pares de estações no registro de
@@ -94,7 +89,7 @@ void update_set_where() {
 
   // Define o arquivo binário como consistente no registro de cabeçalho
   fseek(f_bin, 0, SEEK_SET);
-  status = '1';
+  char status = '1';
   fwrite(&status, sizeof(char), 1, f_bin);
 
   // Fecha o arquivo .bin

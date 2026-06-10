@@ -7,20 +7,31 @@
 #include "../headers/registro.h"
 #include "../headers/sql_functions.h"
 
-void close_files(FILE *f_bin, FILE *f_csv);
+// Função auxiliar para fechar os arquivos
+void close_files(FILE *f_bin, FILE *f_csv) {
+  if (f_bin)
+    fclose(f_bin);
+  if (f_csv)
+    fclose(f_csv);
+}
 
 // Função auxiliar para liberar a memória das hash tables
-void free_tables(HashEstacao *hash_single, HashPar *hash_pair);
+void free_tables(HashEstacao *hash_single, HashPar *hash_pair) {
+  if (hash_single)
+    free_hash_estacao(hash_single);
+  if (hash_pair)
+    free_hash_par(hash_pair);
+}
 
 // Função principal para converter o arquivo .csv para .bin
-void csv_to_bin() {
+void create_table() {
   // Leitura dos nomes dos arquivos .csv e .bin
   char bin_name[50];
   char csv_name[50];
   if (scanf("%s %s", csv_name, bin_name) != 2)
     return;
 
-  // Cria as hashtables para contar as estações e pares de estaçõs únicas
+  // Cria as hashtables para contar as estações e pares de estações únicas
   HashEstacao *hash_single = criar_hash_estacao();
   HashPar *hash_pair = criar_hash_par();
 
@@ -48,29 +59,25 @@ void csv_to_bin() {
     return;
   }
 
-  // Escrita do registro de cabeçalho inicializacao
+  // Escrita do registro de cabeçalho inicialização
+  {
+    // Escreve o valor -1 no topo da lista de removidos, indicando que não há
+    // registros removidos
+    int topo = -1;
+    fwrite(&topo, sizeof(int), 1, f_bin);
 
-  // Aponta para o inicio do arquivo binário e escreve o status como
-  // inconsistente pois o arquivo esta sendo escrito
-  fseek(f_bin, 0, SEEK_SET);
-  char status = '0';
-  fwrite(&status, sizeof(char), 1, f_bin);
+    // Escreve o próximo RRN como -1
+    int proxRRN = -1;
+    fwrite(&proxRRN, sizeof(int), 1, f_bin);
 
-  // Aponta para o topo da lista de removidos e escreve o valor -1, indicando
-  // que não há registros removidos
-  int aux = -1;
-  fwrite(&aux, sizeof(int), 1, f_bin);
+    // Escreve o número de estações únicas como 0
+    int numEst = 0;
+    fwrite(&numEst, sizeof(int), 1, f_bin);
 
-  // Escreve o próximo RRN = -1
-  fwrite(&aux, sizeof(int), 1, f_bin);
-
-  aux = 0;
-
-  // Escreve o número de estações únicas como 0
-  fwrite(&aux, sizeof(int), 1, f_bin);
-
-  // Escreve o número de pares únicos de estações como 0
-  fwrite(&aux, sizeof(int), 1, f_bin);
+    // Escreve o número de pares únicos de estações como 0
+    int numParEst = 0;
+    fwrite(&numParEst, sizeof(int), 1, f_bin);
+  }
 
   // Variaveis auxiliares
   char buffer[256];
@@ -236,20 +243,4 @@ void csv_to_bin() {
   BinarioNaTela(bin_name);
 
   return;
-}
-
-// Função auxiliar para fechar os arquivos
-void close_files(FILE *f_bin, FILE *f_csv) {
-  if (f_bin)
-    fclose(f_bin);
-  if (f_csv)
-    fclose(f_csv);
-}
-
-// Função auxiliar para liberar a memória das hash tables
-void free_tables(HashEstacao *hash_single, HashPar *hash_pair) {
-  if (hash_single)
-    free_hash_estacao(hash_single);
-  if (hash_pair)
-    free_hash_par(hash_pair);
 }
