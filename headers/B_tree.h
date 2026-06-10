@@ -54,9 +54,10 @@ bool find_key(FILE *f_arvore_B, PAGE *page, int RRN, int key, int *key_INDEX,
 bool get_B_tree_page(FILE *f_arvore_B, PAGE *page, int RRN);
 
 /* busca */
-int find_key_in_page(FILE *f_arvore_B, int key, int RRN, int *supost_position);
+bool find_key_in_page(FILE *f_arvore_B, int key, int RRN, int *supost_position);
 
 /* acesso direto */
-int get_archivePointer_value_from_key(FILE *f_arvore_B, int RRN, int index);
+int get_archivePointer_value_from_key(FILE *f_arvore_B, int key, int RRN,
+                                      int index);
 
 #endif
