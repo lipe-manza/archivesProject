@@ -1,9 +1,9 @@
 #include <stdbool.h>
 #include <stdio.h>
 
-#include "../headers/IO.h"
-#include "../headers/registro.h"
-#include "../headers/sql_functions.h"
+#include "../../headers/IO.h"
+#include "../../headers/registro.h"
+#include "../../headers/sql_functions.h"
 
 // Função auxiliar para fechar os arquivos
 void close_files(FILE *f_entrada, FILE *f_arvore_b) {

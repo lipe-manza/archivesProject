@@ -2,10 +2,10 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "../headers/IO.h"
-#include "../headers/hash_tables.h"
-#include "../headers/registro.h"
-#include "../headers/sql_functions.h"
+#include "../../headers/IO.h"
+#include "../../headers/hash_tables.h"
+#include "../../headers/registro.h"
+#include "../../headers/sql_functions.h"
 
 // Função auxiliar para fechar os arquivos
 void close_files(FILE *f_bin, FILE *f_csv) {

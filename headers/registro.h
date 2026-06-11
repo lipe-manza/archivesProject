@@ -10,6 +10,14 @@
 #define TAM_CABECALHO 17
 #define POS_PROX_RRN 5
 
+typedef struct cabecalho {
+  char status;
+  int topo;
+  int proxRRN;
+  int nroEstacoes;
+  int nroParesEstacoes;
+} CABECALHO;
+
 typedef struct registro {
   char removido; // '1' para removido e '0' para nao removido
   int proximo;

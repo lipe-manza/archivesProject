@@ -1,8 +1,8 @@
 #include <stdbool.h>
 #include <stdio.h>
 
-#include "../headers/IO.h"
-#include "../headers/sql_functions.h"
+#include "../../headers/IO.h"
+#include "../../headers/sql_functions.h"
 
 void select_from() {
   char bin_name[50];

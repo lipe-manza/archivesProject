@@ -1,9 +1,9 @@
 #include <stdbool.h>
 #include <stdio.h>
 
-#include "../headers/IO.h"
-#include "../headers/filtro.h"
-#include "../headers/sql_functions.h"
+#include "../../headers/IO.h"
+#include "../../headers/filtro.h"
+#include "../../headers/sql_functions.h"
 
 // Função auxiliar para fechar os arquivos
 void close_files(FILE *f_entrada, FILE *f_arvore_b) {
@@ -13,7 +13,7 @@ void close_files(FILE *f_entrada, FILE *f_arvore_b) {
     fclose(f_arvore_b);
 }
 
-void delete_from_where_ab() {
+void select_from_where() {
   // Lê o nome do arquivo binário de entrada e da árvore B
   char nome_entrada[50];
   char nome_arvore_b[50];
@@ -39,7 +39,7 @@ void delete_from_where_ab() {
     return;
   }
 
-  // Lê o número de sessões a serem feitas
+  // Lê o número de consultas a serem feitas
   int n;
   if (scanf("%d", &n) != 1) {
     printf("Entrada inválida.\n");
@@ -47,7 +47,7 @@ void delete_from_where_ab() {
     return;
   }
 
-  // Itera sobre as sessões de deleção
+  // Itera sobre as consultas
   for (int i = 0; i < n; i++) {
     // Struct registro que serve como comparação para filtrar os registros do
     // arquivo de entrada
@@ -61,19 +61,21 @@ void delete_from_where_ab() {
     // e o array search com os campos a serem comparados
     filter_build(&filter, search_for);
 
+    // Flag para indicar se algum registro foi encontrado
+    bool encontrou = false;
+
     // Se um dos campos de busca for o codEstacao, usamos a árvore B
     if (search_for[0]) {
       // Abre o arquivo binário da árvore B para leitura e verifica se a
       // abertura foi bem sucedida conferindo o status do arquivo
-      FILE *f_arvore_b = open_bin(nome_entrada, "rb+");
+      FILE *f_arvore_b = open_bin(nome_arvore_b, "rb");
       if (f_arvore_b == NULL) {
         fclose(f_entrada);
         return;
       }
 
-      // REMOÇÃO ÁRVORE B
+      int RRN = 0; // TROCAR PELO DA ARVORE B
 
-      // Struct registro auxiliar para ler o binário
       REG registro;
 
       // Lê o registro do arquivo binário
@@ -89,23 +91,15 @@ void delete_from_where_ab() {
     } else {
       encontrou = search(f_entrada, reg_count, search_for, &filter);
     }
+
+    // Se nenhum registro foi encontrado, o usuário é avisado
+    if (!encontrou) {
+      printf("Registro inexistente.\n");
+    }
+
+    // Separa as consultas por uma linha em branco
+    printf("\n");
   }
-
-  // Atualiza o número de estações e pares de estações no registro de cabeçalho
-  atualizar_estacoes(f_entrada);
-
-  // Define o arquivo binário como consistente no registro de cabeçalho
-  char status = '1';
-  fseek(f_entrada, 0, SEEK_SET);
-  fwrite(&status, sizeof(char), 1, f_entrada);
-
-  // Fecha o arquivo binário e o define como NULL para evitar acessos
-  // indevidos
-  fclose(f_entrada);
-  f_entrada = NULL;
-
-  BinarioNaTela(nome_entrada);
-  BinarioNaTela(nome_arvore_b);
 
   // Fecha o arquivo de entrada
   fclose(f_entrada);

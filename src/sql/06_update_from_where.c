@@ -1,10 +1,10 @@
 #include <stdbool.h>
 #include <stdio.h>
 
-#include "../headers/IO.h"
-#include "../headers/filtro.h"
-#include "../headers/registro.h"
-#include "../headers/sql_functions.h"
+#include "../../headers/IO.h"
+#include "../../headers/filtro.h"
+#include "../../headers/registro.h"
+#include "../../headers/sql_functions.h"
 
 void update_loop(FILE *f_bin, int reg_count, bool *search, REG *filter,
                  bool *update, REG *updated) {

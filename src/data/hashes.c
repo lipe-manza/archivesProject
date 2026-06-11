@@ -1,7 +1,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "../headers/hash_tables.h"
+#include "../../headers/hash_tables.h"
 
 #define TABLE_SIZE 1009
 

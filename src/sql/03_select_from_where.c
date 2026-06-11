@@ -1,9 +1,9 @@
 #include <stdbool.h>
 #include <stdio.h>
 
-#include "../headers/IO.h"
-#include "../headers/filtro.h"
-#include "../headers/sql_functions.h"
+#include "../../headers/IO.h"
+#include "../../headers/filtro.h"
+#include "../../headers/sql_functions.h"
 
 bool search(FILE *f_bin, int reg_count, bool *search_for, REG *filter) {
   // Struct registro auxiliar para ler o .bin

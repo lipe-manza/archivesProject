@@ -1,9 +1,9 @@
 #include <stdbool.h>
 #include <stdio.h>
 
-#include "../headers/IO.h"
-#include "../headers/filtro.h"
-#include "../headers/sql_functions.h"
+#include "../../headers/IO.h"
+#include "../../headers/filtro.h"
+#include "../../headers/sql_functions.h"
 
 void delete_loop(FILE *f_bin, int reg_count, bool *search, REG *filter) {
   // Struct registro auxiliar para ler o binário

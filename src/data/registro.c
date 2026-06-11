@@ -3,9 +3,9 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "../headers/registro.h"
+#include "../../headers/registro.h"
 
-#include "../headers/hash_tables.h"
+#include "../../headers/hash_tables.h"
 
 bool read_from_bin(FILE *p_bin, REG *reg) {
 

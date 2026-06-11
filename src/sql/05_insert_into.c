@@ -1,8 +1,8 @@
 #include <stdbool.h>
 #include <stdio.h>
 
-#include "../headers/IO.h"
-#include "../headers/registro.h"
+#include "../../headers/IO.h"
+#include "../../headers/sql_functions.h"
 
 void read_insert_reg(FILE *f_bin, REG *registro, int *proxRRN) {
   // Lê os valores do novo registro a ser inserido
