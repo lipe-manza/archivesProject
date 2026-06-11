@@ -16,7 +16,7 @@ void delete_from_where_ab();
 void insert_into_ab();
 
 bool search(FILE *f_bin, int reg_count, bool *search_for, REG *filter);
-void read_insert_reg(FILE *f_bin, REG *registro, int proxRRN);
+void read_insert_reg(FILE *f_bin, REG *registro, int *proxRRN);
 void update_loop(FILE *f_bin, int reg_count, bool *search, REG *filter,
                  bool *update, REG *updated);
 

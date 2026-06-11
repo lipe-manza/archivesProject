@@ -4,6 +4,11 @@
 #include <stdbool.h>
 #include <stdio.h>
 
+#define ERROR -1
+
+#define NOT_IN_PAGE 0
+#define IN_PAGE 1
+
 #define B_TREE_ORDER 4
 #define MAX_KEYS_PER_PAGE_B_TREE 3
 #define MIN_KEYS_PER_PAGE_B_TREE 1
@@ -33,11 +38,11 @@ typedef struct header_B_tree {
 #define PAGE_PAGE_TYPE_POSITION_B_TREE 5
 #define PAGE_NUM_OF_KEYS_POSITION_B_TREE 9
 #define PAGE_KEYS_POSITION_B_TREE 13
-#define PAGE_ARCHIVE_POINTER_POSITION_B_TREE 17
+#define PAGE_FILE_POINTER_POSITION_B_TREE 17
 #define PAGE_CHILD_POINTER_POSITION_B_TREE 37
 
 typedef struct page {
-  char removed; // 0 = inconsistente
+  char removed; // 1 = removed
   int nextInStack;
   int pageType;
   int numOfKeys;
@@ -46,18 +51,30 @@ typedef struct page {
   int childPointer[MAX_CHILDREN_B_TREE];
 
 } PAGE;
-// Funções principais
-bool find_key(FILE *f_arvore_B, PAGE *page, int RRN, int key, int *key_INDEX,
-              int *page_RRN);
+
 // Funcoes Auxiliares
 /* leitura de página */
 bool get_B_tree_page(FILE *f_arvore_B, PAGE *page, int RRN);
 
 /* busca */
-bool find_key_in_page(FILE *f_arvore_B, int key, int RRN, int *supost_position);
+
+int find_key(FILE *f_arvore_B, PAGE *page, int RRN, int key, int *key_INDEX,
+             int *page_RRN);
+
+int find_key_in_page(FILE *f_arvore_B, PAGE *page, int key,
+                     int *supost_position);
 
 /* acesso direto */
+
 int get_filePointer_value_from_key(FILE *f_arvore_B, int key, int RRN,
                                    int index);
+bool read_B_tree_page_from_bin(FILE *f_arvore_B, PAGE *page, int RRN);
 
+bool write_B_tree_page_from_bin(FILE *f_arvore_B, PAGE *page, int RRN);
+
+/* Inserir */
+#define PROMOTION 1
+#define NO_PROMOTION 0
+
+int insert();
 #endif

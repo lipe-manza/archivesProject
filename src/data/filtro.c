@@ -1,9 +1,9 @@
 #include <stdbool.h>
 #include <string.h>
 
-#include "../headers/filtro.h"
+#include "../../headers/filtro.h"
 
-#include "../headers/IO.h"
+#include "../../headers/IO.h"
 
 int field_to_index(char *str) {
   char *fields[] = {"codEstacao",      "codLinha",        "codProxEstacao",
