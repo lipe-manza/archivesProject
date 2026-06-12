@@ -1,18 +1,29 @@
-#include <stdbool.h>
-#include <stdio.h>
-
 #include "../../headers/IO.h"
 #include "../../headers/filtro.h"
 #include "../../headers/sql_functions.h"
 
-void delete_loop(FILE *f_bin, int reg_count, bool *search, REG *filter) {
+// Função auxiliar para evitar repetição quando há falha no processamento do
+// arquivo
+void falha_processamento_arquivo(FILE **f) {
+  if (f != NULL && *f != NULL) {
+    fclose(*f);
+    *f = NULL;
+  }
+
+  printf("Falha no processamento do arquivo.");
+}
+
+void delete_loop(FILE *f_bin, CAB *cabecalho, bool *search, REG *filter) {
+  if (f_bin == NULL || cabecalho == NULL || search == NULL || filter == NULL)
+    return;
+
   // Struct registro auxiliar para ler o binário
   REG registro;
 
   // Itera pelos registros do .bin
-  for (int RRN = 0; RRN < reg_count; RRN++) {
+  for (int RRN = 0; RRN < cabecalho->proxRRN; RRN++) {
     // Lê o registro do .bin para a struct registro
-    read_from_bin(f_bin, &registro);
+    ler_reg_bin(f_bin, &registro);
 
     // Se o registro está removido ele é pulado
     if (registro.removido == '1')
@@ -23,65 +34,49 @@ void delete_loop(FILE *f_bin, int reg_count, bool *search, REG *filter) {
     if (match_filter(&registro, search, filter)) {
       // Remoção lógica
 
-      int topo = -1;
       char removido = '1';
 
-      // Lê o topo da pilha de registros removidos indicado no
-      // registro de cabeçalho
-      fseek(f_bin, 1, SEEK_SET);
-      if (fread(&topo, sizeof(int), 1, f_bin) != 1) {
-        printf("Falha no processamento do arquivo.\n");
-        fclose(f_bin);
-        return;
-      }
-
       // Define o registro atual como removido
-      fseek(f_bin, RRN * TAM_REGISTRO + TAM_CABECALHO, SEEK_SET);
+      fseek(f_bin, REG_BYTE_OFFSET(RRN) + POS_REM_REG, SEEK_SET);
       fwrite(&removido, sizeof(char), 1, f_bin);
 
       // Atribui ao campo próximo do registro o valor anterior do topo
       // da pilha de registros removidos
-      fwrite(&topo, sizeof(int), 1, f_bin);
+      fwrite(&cabecalho->topo, sizeof(int), 1, f_bin);
 
-      // Define o topo da pilha como o RRN do registro que acabou de
-      // ser removido
-      fseek(f_bin, 1, SEEK_SET);
-      fwrite(&RRN, sizeof(int), 1, f_bin);
+      cabecalho->topo = RRN;
     }
   }
 }
 
 void delete_from_where() {
-  // Variável auxiliar para ler o nome dor arquivo
-  char bin_name[50];
+  FILE *f_bin = NULL;
 
   // Lê o nome do arquivo binário
+  char bin_name[50];
   if (scanf("%s", bin_name) != 1) {
-    printf("Falha na leitura do nome do arquivo.\n");
+    falha_processamento_arquivo(&f_bin);
     return;
   }
 
   // Abre o arquivo .bin para leitura e escrita e verifica se a abertura
   // foi bem sucedida conferindo o status do arquivo
-  FILE *f_bin = open_bin(bin_name, "rb+");
-  if (f_bin == NULL)
-    return;
-
-  // Vai para o campo proxRRN do registro de cabeçalho para ler quantos
-  // registros existem
-  int reg_count = 0;
-  fseek(f_bin, 5, SEEK_SET);
-  if (fread(&reg_count, sizeof(int), 1, f_bin) != 1) {
-    printf("Falha no processamento do arquivo.\n");
-    fclose(f_bin);
+  f_bin = open_bin(bin_name, "rb+");
+  if (f_bin == NULL) {
+    falha_processamento_arquivo(&f_bin);
     return;
   }
+
+  tornar_inconsistente(f_bin);
+
+  // Cria a struct do cabeçalho lendo do arquivo binário
+  CAB cabecalho;
+  ler_cab_bin(f_bin, &cabecalho);
 
   // Lê o número de sessões a serem feitas
   int n;
   if (scanf("%d", &n) != 1) {
-    printf("Falha no processamento do arquivo.\n");
-    fclose(f_bin);
+    falha_processamento_arquivo(&f_bin);
     return;
   }
 
@@ -99,22 +94,21 @@ void delete_from_where() {
     // pesquisa
     filter_build(&filter, search);
 
-    delete_loop(f_bin, reg_count, search, &filter);
+    delete_loop(f_bin, &cabecalho, search, &filter);
 
     // Atualiza o número de estações e pares de estações no registro de
     // cabeçalho
     atualizar_estacoes(f_bin);
 
-    // Define o arquivo binário como consistente no registro de cabeçalho
-    char status = '1';
-    fseek(f_bin, 0, SEEK_SET);
-    fwrite(&status, sizeof(char), 1, f_bin);
+    // Atualiza e escreve o cabeçalho
+    cabecalho.status = '1';
+    escrever_cab_bin(f_bin, &cabecalho);
 
     // Fecha o arquivo binário e o define como NULL para evitar acessos
     // indevidos
     fclose(f_bin);
     f_bin = NULL;
-
-    BinarioNaTela(bin_name);
   }
+
+  BinarioNaTela(bin_name);
 }

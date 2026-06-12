@@ -5,6 +5,8 @@
 
 FILE *open_bin(char *bin_name, char *mode);
 
+void tornar_inconsistente(FILE *f_bin);
+
 void print_registro_in_terminal(REG *registro);
 
 void print_registro_in_terminal_csv(REG *registro);

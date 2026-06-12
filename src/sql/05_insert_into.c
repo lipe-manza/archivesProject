@@ -1,10 +1,21 @@
-#include <stdbool.h>
-#include <stdio.h>
-
 #include "../../headers/IO.h"
 #include "../../headers/sql_functions.h"
 
-void read_insert_reg(FILE *f_bin, REG *registro, int *proxRRN) {
+// Função auxiliar para evitar repetição quando há falha no processamento do
+// arquivo
+void falha_processamento_arquivo(FILE **f) {
+  if (f != NULL && *f != NULL) {
+    fclose(*f);
+    *f = NULL;
+  }
+
+  printf("Falha no processamento do arquivo.");
+}
+
+void read_insert_reg(FILE **f_bin, CAB *cabecalho, REG *registro) {
+  if (f_bin == NULL || *f_bin == NULL || cabecalho == NULL || registro == NULL)
+    return;
+
   // Lê os valores do novo registro a ser inserido
   read_new_registro_from_terminal(registro);
 
@@ -12,82 +23,66 @@ void read_insert_reg(FILE *f_bin, REG *registro, int *proxRRN) {
   registro->removido = '0';
   registro->proximo = -1;
 
-  // Lê o campo topo do registro de cabeçalho
-  int topo = -1;
-  fseek(f_bin, 1, SEEK_SET);
-  if (fread(&topo, sizeof(int), 1, f_bin) != 1) {
-    printf("Falha no processamento do arquivo.\n");
-    fclose(f_bin);
-    return;
-  }
-
   // Se a pilha de removidos estiver vazia, insere o novo registro no
   // final do arquivo
-  if (topo == -1) {
+  if (cabecalho->topo == -1) {
     // Vai para o byteoffset do registro de RRN == proxRRN e
     // escreve o novo registro no arquivo
-    fseek(f_bin, (*proxRRN) * TAM_REGISTRO + TAM_CABECALHO, SEEK_SET);
-    write_in_bin(f_bin, registro);
+    fseek(*f_bin, REG_BYTE_OFFSET(cabecalho->proxRRN), SEEK_SET);
+    escrever_reg_bin(*f_bin, registro);
 
     // Atualiza o próximo RRN (apenas a variável, não no arquivo binário)
-    (*proxRRN)++;
+    cabecalho->proxRRN++;
   }
   // Se a pilha de removidos não estiver vazia, insere no byteoffset do
   // RRN == topo
   else {
-    int byteoffset_new_registro = topo * TAM_REGISTRO + TAM_CABECALHO;
+    int novo_topo = -1;
 
     // Lê o novo topo
-    fseek(f_bin, byteoffset_new_registro + 1, SEEK_SET);
-    if (fread(&topo, sizeof(int), 1, f_bin) != 1) {
-      printf("Falha na atualização do topo.\n");
-      fclose(f_bin);
+    fseek(*f_bin, REG_BYTE_OFFSET(cabecalho->topo) + POS_PROX_REG, SEEK_SET);
+    if (fread(&novo_topo, sizeof(int), 1, *f_bin) != 1) {
+      falha_processamento_arquivo(f_bin);
       return;
     }
 
-    // Atualiza o topo no registro de cabeçalho
-    fseek(f_bin, 1, SEEK_SET);
-    fwrite(&topo, sizeof(int), 1, f_bin);
-
-    // Atualiza o campo proxRRN no arquivo binário
-    fwrite(proxRRN, sizeof(int), 1, f_bin);
-
     // Vai para o local do novo registro e escreve ele no .bin
-    fseek(f_bin, byteoffset_new_registro, SEEK_SET);
-    write_in_bin(f_bin, registro);
+    fseek(*f_bin, REG_BYTE_OFFSET(cabecalho->topo), SEEK_SET);
+    escrever_reg_bin(*f_bin, registro);
+
+    // Atualiza o topo na struct do cabeçalho
+    cabecalho->topo = novo_topo;
   }
 }
 
 void insert_into() {
-  // Váriavel auxiliar para ler o nome dor arquivo
-  char bin_name[50];
+  FILE *f_bin = NULL;
+
   // Lê o nome do arquivo binário
+  char bin_name[50];
   if (scanf("%s", bin_name) != 1) {
-    printf("Falha na leitura do nome do arquivo.\n");
+    falha_processamento_arquivo(&f_bin);
     return;
   }
 
   // Abre o arquivo .bin para leitura e escrita e verifica se a abertura
   // foi bem sucedida conferindo o status do arquivo
-  FILE *f_bin = open_bin(bin_name, "rb+");
-  if (f_bin == NULL)
-    return;
-
-  // Vai para o campo proxRRN do registro de cabeçalho para ler quantos
-  // registros existem
-  int proxRRN = 0;
-  fseek(f_bin, POS_PROX_RRN, SEEK_SET);
-  if (fread(&proxRRN, sizeof(int), 1, f_bin) != 1) {
-    printf("Falha no processamento do arquivo.\n");
-    fclose(f_bin);
+  f_bin = open_bin(bin_name, "rb+");
+  if (f_bin == NULL) {
+    falha_processamento_arquivo(&f_bin);
     return;
   }
+
+  tornar_inconsistente(f_bin);
+
+  // Cria a struct do cabeçalho lendo do arquivo binário
+  CAB cabecalho;
+  ler_cab_bin(f_bin, &cabecalho);
 
   // Lê o número de inserções a serem feitas
   int n;
   if (scanf("%d", &n) != 1) {
-    printf("Falha no processamento do arquivo.\n");
-    fclose(f_bin);
+    falha_processamento_arquivo(&f_bin);
     return;
   }
 
@@ -96,17 +91,16 @@ void insert_into() {
     // Struct registro auxiliar para ler o registro do terminal
     REG registro;
 
-    read_insert_reg(f_bin, &registro, &proxRRN);
+    read_insert_reg(&f_bin, &cabecalho, &registro);
   }
 
   // Atualiza o número de estações e pares de estações no registro de
   // cabeçalho
   atualizar_estacoes(f_bin);
 
-  // Atualiza o status do arquivo no registro de cabeçalho
-  char status = '1';
-  fseek(f_bin, 0, SEEK_SET);
-  fwrite(&status, sizeof(char), 1, f_bin);
+  // Atualiza e escreve o cabeçalho
+  cabecalho.status = '1';
+  escrever_cab_bin(f_bin, &cabecalho);
 
   // Fecha o arquivo .bin
   fclose(f_bin);

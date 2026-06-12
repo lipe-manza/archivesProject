@@ -1,34 +1,40 @@
-#include <stdbool.h>
-#include <stdio.h>
-
 #include "../../headers/IO.h"
+#include "../../headers/registro.h"
 #include "../../headers/sql_functions.h"
 
+// Função auxiliar para evitar repetição quando há falha no processamento do
+// arquivo
+void falha_processamento_arquivo(FILE **f) {
+  if (f != NULL && *f != NULL) {
+    fclose(*f);
+    *f = NULL;
+  }
+
+  printf("Falha no processamento do arquivo.");
+}
+
 void select_from() {
-  char bin_name[50];
+  FILE *f_bin = NULL;
 
   // Lê o nome do arquivo binário
+  char bin_name[50];
   if (scanf("%s", bin_name) != 1) {
-    printf("Falha na leitura do nome do arquivo.\n");
+    falha_processamento_arquivo(&f_bin);
     return;
   }
 
   // Abre o arquivo .bin para leitura e verifica se a abertura
   // foi bem sucedida conferindo o status do arquivo
-  FILE *f_bin = open_bin(bin_name, "rb");
+  f_bin = open_bin(bin_name, "rb");
 
-  if (f_bin == NULL)
-    return;
-
-  // Vai para o campo proxRRN do registro de cabeçalho para ler quantos
-  // registros existem
-  int reg_count = 0;
-  fseek(f_bin, POS_PROX_RRN, SEEK_SET);
-  if (fread(&reg_count, sizeof(int), 1, f_bin) != 1) {
-    printf("Falha no processamento do arquivo.\n");
-    fclose(f_bin);
+  if (f_bin == NULL) {
+    falha_processamento_arquivo(&f_bin);
     return;
   }
+
+  // Cria a struct do cabeçalho lendo do arquivo binário
+  CAB cabecalho;
+  ler_cab_bin(f_bin, &cabecalho);
 
   // Struct registro auxiliar para ler o .bin
   REG registro;
@@ -40,11 +46,10 @@ void select_from() {
   fseek(f_bin, TAM_CABECALHO, SEEK_SET);
 
   // Itera pelos registros do .bin
-  for (int RRN = 0; RRN < reg_count; RRN++) {
+  for (int RRN = 0; RRN < cabecalho.proxRRN; RRN++) {
     // Lê o registro do .bin para a struct registro
-    if (!read_from_bin(f_bin, &registro)) {
-      printf("Falha na leitura do arquivo");
-      fclose(f_bin);
+    if (!ler_reg_bin(f_bin, &registro)) {
+      falha_processamento_arquivo(&f_bin);
       return;
     };
 

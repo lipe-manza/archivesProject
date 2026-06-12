@@ -1,67 +1,78 @@
-#include <stdbool.h>
-#include <stdio.h>
-
 #include "../../headers/IO.h"
 #include "../../headers/filtro.h"
 #include "../../headers/sql_functions.h"
 
-bool search(FILE *f_bin, int reg_count, bool *search_for, REG *filter) {
+// Função auxiliar para evitar repetição quando há falha no processamento do
+// arquivo
+void falha_processamento_arquivo(FILE **f) {
+  if (f != NULL && *f != NULL) {
+    fclose(*f);
+    *f = NULL;
+  }
+
+  printf("Falha no processamento do arquivo.");
+}
+
+bool search(FILE *f_bin, CAB *cabecalho, bool *search_for, REG *filter) {
+  if (f_bin == NULL || cabecalho == NULL || search_for == NULL ||
+      filter == NULL)
+    return false;
+
   // Struct registro auxiliar para ler o .bin
   REG registro;
+
+  bool encontrou = false;
 
   // Pula para o primeiro Registro
   fseek(f_bin, TAM_CABECALHO, SEEK_SET);
 
   // Itera pelos registros do .bin
-  for (int RRN = 0; RRN < reg_count; RRN++) {
+  for (int RRN = 0; RRN < cabecalho->proxRRN; RRN++) {
     // Lê o registro do arquivo binário
-    read_from_bin(f_bin, &registro);
+    ler_reg_bin(f_bin, &registro);
     // Se o registro está removido ele não é selecionado
     if (registro.removido == '1')
       continue;
 
     // Se o registro passa pelo filtro ele é impresso
     if (match_filter(&registro, search_for, filter)) {
-      return true;
+      encontrou = true;
       print_registro_in_terminal(&registro);
 
-      // Se achou o codEst acaba porque é chave única
-      if (search_for[0])
+      // Se achou o codEstacao acaba porque é chave única
+      if (search_for[COD_ESTACAO])
         break;
     }
   }
-  return false;
+  return encontrou;
 }
 
 void select_from_where() {
-  char bin_name[50];
+  FILE *f_bin = NULL;
+
   // Lê o nome do arquivo binário
+  char bin_name[50];
   if (scanf("%s", bin_name) != 1) {
-    printf("Falha na leitura do nome do arquivo.\n");
+    falha_processamento_arquivo(&f_bin);
     return;
   }
 
   // Abre o arquivo .bin para leitura e verifica se a abertura
   // foi bem sucedida conferindo o status do arquivo
-  FILE *f_bin = open_bin(bin_name, "rb");
-  if (f_bin == NULL)
-    return;
-
-  // Vai para o campo proxRRN do registro de cabeçalho para ler quantos
-  // registros existem
-  int reg_count = 0;
-  fseek(f_bin, POS_PROX_RRN, SEEK_SET);
-  if (fread(&reg_count, sizeof(int), 1, f_bin) != 1) {
-    printf("Falha no processamento do arquivo.\n");
-    fclose(f_bin);
+  f_bin = open_bin(bin_name, "rb");
+  if (f_bin == NULL) {
+    falha_processamento_arquivo(&f_bin);
     return;
   }
+
+  // Cria a struct do cabeçalho lendo do arquivo binário
+  CAB cabecalho;
+  ler_cab_bin(f_bin, &cabecalho);
 
   // Lê o número de consultas a serem feitas
   int n;
   if (scanf("%d", &n) != 1) {
-    printf("Entrada inválida.\n");
-    fclose(f_bin);
+    falha_processamento_arquivo(&f_bin);
     return;
   }
 
@@ -79,7 +90,7 @@ void select_from_where() {
     // e o array search com os campos a serem comparados
     filter_build(&filter, search_for);
 
-    bool encontrou = search(f_bin, reg_count, search_for, &filter);
+    bool encontrou = search(f_bin, &cabecalho, search_for, &filter);
 
     // Se nenhum registro foi encontrado, o usuário é avisado
     if (!encontrou) {

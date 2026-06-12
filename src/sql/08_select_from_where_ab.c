@@ -1,6 +1,3 @@
-#include <stdbool.h>
-#include <stdio.h>
-
 #include "../../headers/IO.h"
 #include "../../headers/filtro.h"
 #include "../../headers/sql_functions.h"
