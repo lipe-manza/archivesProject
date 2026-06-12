@@ -1,44 +1,281 @@
 #include <stdbool.h>
-#include <stdio.h>
 
 #include "../../headers/B_tree.h"
 
-int insert_key(FILE *f_arvore_B, int currentRRN, int key, int *promotionKey,
-               int *promotionRightChild) {
-  // Se chegou no final da tree
+#define MAX_KEYS_SPLIT_PAGE (MAX_KEYS_PER_PAGE_B_TREE + 1)
+#define MAX_CHILDREN_SPLIT_PAGE (MAX_CHILDREN_B_TREE + 1)
+
+typedef struct splitPage {
+  int numOfKeys;
+
+  KEY keys[MAX_KEYS_SPLIT_PAGE];
+
+  int childPointer[MAX_CHILDREN_SPLIT_PAGE];
+} SPLITPAGE;
+
+static int determine_page_type(PAGE *page) {
+  for (int i = 0; i <= page->numOfKeys; i++) {
+    if (page->childPointer[i] != -1)
+      return 1; // Intermediario
+  }
+
+  return -1; // Folha
+}
+
+static int insert_ordened_into_splitPage(SPLITPAGE *page, KEY insertKey,
+                                         int insertChildPointer) {
+  int i = 0;
+
+  while (i < page->numOfKeys && insertKey.value > page->keys[i].value)
+    i++;
+
+  for (int j = page->numOfKeys; j > i; j--) {
+    page->keys[j] = page->keys[j - 1];
+    page->childPointer[j + 1] = page->childPointer[j];
+  }
+
+  page->keys[i] = insertKey;
+  page->childPointer[i + 1] = insertChildPointer;
+
+  page->numOfKeys++;
+
+  return i;
+}
+
+int insert_ordened_in_page(PAGE *page, KEY insertKey, int insertChildPointer) {
+  int i = 0;
+
+  while (i < page->numOfKeys && insertKey.value > page->keys[i].value)
+    i++;
+
+  for (int j = page->numOfKeys; j > i; j--) {
+    page->keys[j] = page->keys[j - 1];
+    page->childPointer[j + 1] = page->childPointer[j];
+  }
+
+  page->keys[i] = insertKey;
+  page->childPointer[i + 1] = insertChildPointer;
+
+  page->numOfKeys++;
+
+  return i;
+}
+
+bool split(PAGE *page, PAGE *newPage, KEY insertKey, int insertchildpointer,
+           KEY *promotionKey) {
+
+  SPLITPAGE sp;
+  int i;
+
+  // Inicializa as structs e os vetores das structs
+
+  /* SPLITPAGE*/
+  sp.numOfKeys = 0;
+  for (int i = 0; i < MAX_CHILDREN_SPLIT_PAGE; i++) {
+    sp.childPointer[i] = -1;
+    if (i < MAX_KEYS_SPLIT_PAGE) {
+      sp.keys[i].value = -1;
+      sp.keys[i].byteOffset = -1;
+    }
+  }
+  /* newPage */
+
+  for (int i = 0; i < MAX_CHILDREN_B_TREE; i++) {
+    newPage->childPointer[i] = -1;
+    if (i < MAX_KEYS_PER_PAGE_B_TREE) {
+      newPage->keys[i].value = -1;
+      newPage->keys[i].byteOffset = -1;
+    }
+  }
+
+  // Preenche o splitPage com os valores da pagina da esquerda
+  sp.numOfKeys = page->numOfKeys;
+
+  for (i = 0; i < page->numOfKeys; i++) {
+    sp.keys[i] = page->keys[i];
+  }
+
+  for (i = 0; i <= page->numOfKeys; i++) {
+    sp.childPointer[i] = page->childPointer[i];
+  }
+
+  // Insere ordenadamente na splitPage
+  insert_ordened_into_splitPage(&sp, insertKey, insertchildpointer);
+
+  // Calcula a separacao da sp e seta o promotionKey como a menor da direita
+  int total = sp.numOfKeys;
+  int mid = total / 2;
+
+  *promotionKey = sp.keys[mid];
+
+  /* pagina da esquerda*/
+  page->numOfKeys = mid;
+
+  for (i = 0; i < mid; i++) {
+    page->keys[i] = sp.keys[i];
+  }
+
+  for (i = mid; i < MAX_KEYS_PER_PAGE_B_TREE; i++) {
+    page->keys[i].value = -1;
+    page->keys[i].byteOffset = -1;
+  }
+
+  for (i = 0; i <= mid; i++) {
+    page->childPointer[i] = sp.childPointer[i];
+  }
+
+  for (i = mid + 1; i < MAX_CHILDREN_B_TREE; i++) {
+    page->childPointer[i] = -1;
+  }
+
+  /* pagina da direita*/
+  newPage->removed = '0';
+  newPage->nextInStack = -1;
+  newPage->numOfKeys = total - mid - 1;
+
+  // O leftChildPointer da primeira Key na pagina da direita
+  // vai ser o rightChildPointer da promotionKey de index[mid]
+  newPage->childPointer[0] = sp.childPointer[mid + 1];
+
+  int j = 0;
+
+  for (i = mid + 1; i < total; i++) {
+    newPage->keys[j] = sp.keys[i];
+    newPage->childPointer[j + 1] = sp.childPointer[i + 1];
+    j++;
+  }
+
+  for (; j < MAX_KEYS_PER_PAGE_B_TREE; j++) {
+    newPage->keys[j].value = -1;
+    newPage->keys[j].byteOffset = -1;
+  }
+
+  for (i = newPage->numOfKeys + 1; i < MAX_CHILDREN_B_TREE; i++) {
+    newPage->childPointer[i] = -1;
+  }
+
+  page->pageType = determine_page_type(page);
+  newPage->pageType = determine_page_type(newPage);
+
+  return true;
+}
+
+int insert_key_aux(FILE *f_arvore_B, HEADER_BT *header, int currentRRN, KEY key,
+                   KEY *promotionKey, int *promotionRightChild) {
+
   if (currentRRN == -1) {
     *promotionKey = key;
     *promotionRightChild = -1;
+
     return PROMOTION;
   }
 
-  PAGE *auxCurrentPage;
+  PAGE currentPage;
 
-  // Le a pagina do RRN atual
-  if (get_B_tree_page(f_arvore_B, auxCurrentPage, currentRRN))
+  if (!read_B_tree_page_from_bin(f_arvore_B, &currentPage, currentRRN))
     return ERROR;
 
-  // Acha a posicao da key(ou suposta) e ve se esta na pagina
-  int pos = -1;
-  int keyIs = find_key_in_page(f_arvore_B, auxCurrentPage, key, &pos);
+  int pos;
 
-  if (keyIs == IN_PAGE) {
-    printf("Página já possui a chave");
+  int found = find_key_in_page(&currentPage, key.value, &pos);
+
+  if (found == IN_PAGE)
     return ERROR;
+
+  KEY promotedKey;
+  int promotedRightRRN;
+
+  int status = insert_key_aux(f_arvore_B, header, currentPage.childPointer[pos],
+                              key, &promotedKey, &promotedRightRRN);
+
+  if (status == ERROR || status == NO_PROMOTION)
+    return status;
+
+  if (currentPage.numOfKeys < MAX_KEYS_PER_PAGE_B_TREE) {
+
+    insert_ordened_in_page(&currentPage, promotedKey, promotedRightRRN);
+
+    if (!write_B_tree_page_in_bin(f_arvore_B, &currentPage, currentRRN))
+      return ERROR;
+
+    return NO_PROMOTION;
   }
 
-  int promotedRRN = -1;
-  int promotedKey = -1;
-  int insertStatus = insert_key(f_arvore_B, auxCurrentPage->childPointer[pos],
-                                key, &promotedRRN, &promotedKey);
+  PAGE newPage;
 
-  // Caso não tenha promotion ou houve erro retorna o status
-  if (insertStatus == ERROR || insertStatus == NO_PROMOTION) {
-    return insertStatus;
-  } // Caso tenha espaço na página insere a a promotedKey na página ligada ao no
-    // de RRN promotedRRN(que pode ser de um novo nó devido ao split, ou nulo
-    // quando nao houver split)
-  else if (auxCurrentPage->numOfKeys < MAX_KEYS_PER_PAGE_B_TREE) {
-  } else {
+  int newRRN = get_next_available_RRN_in_B_tree(f_arvore_B, header);
+
+  if (newRRN == -1)
+    return ERROR;
+
+  split(&currentPage, &newPage, promotedKey, promotedRightRRN, promotionKey);
+
+  *promotionRightChild = newRRN;
+
+  if (!write_B_tree_page_in_bin(f_arvore_B, &currentPage, currentRRN))
+    return ERROR;
+
+  if (!write_B_tree_page_in_bin(f_arvore_B, &newPage, newRRN))
+    return ERROR;
+
+  header->numOfPages++;
+
+  return PROMOTION;
+}
+
+bool create_new_root(FILE *f_arvore_B, HEADER_BT *header, KEY key,
+                     int promotedRightRRN) {
+  PAGE newRoot;
+
+  newRoot.removed = '0';
+  newRoot.nextInStack = -1;
+  newRoot.pageType = 0;
+  newRoot.numOfKeys = 1;
+
+  int newRootRRN = get_next_available_RRN_in_B_tree(f_arvore_B, header);
+
+  newRoot.keys[0] = key;
+
+  for (int i = 1; i < MAX_KEYS_PER_PAGE_B_TREE; i++) {
+    newRoot.keys[i].value = -1;
+    newRoot.keys[i].byteOffset = -1;
   }
+
+  newRoot.childPointer[0] = header->rootPage;
+  newRoot.childPointer[1] = promotedRightRRN;
+
+  for (int i = 2; i < MAX_CHILDREN_B_TREE; i++) {
+    newRoot.childPointer[i] = -1;
+  }
+
+  if (!write_B_tree_page_in_bin(f_arvore_B, &newRoot, newRootRRN))
+    return false;
+
+  header->numOfPages++;
+  header->rootPage = newRootRRN;
+
+  if (!write_B_tree_header_in_bin(f_arvore_B, header))
+    return false;
+
+  return true;
+}
+
+bool insert_key(FILE *f_arvore_B, HEADER_BT *header, KEY key) {
+
+  KEY promotedKey;
+  int promotedRightRRN;
+
+  int status = insert_key_aux(f_arvore_B, header, header->rootPage, key,
+                              &promotedKey, &promotedRightRRN);
+
+  if (status == ERROR)
+    return false;
+
+  if (status == NO_PROMOTION)
+    return true;
+
+  if (!create_new_root(f_arvore_B, header, promotedKey, promotedRightRRN))
+    return false;
+
+  return true;
 }
