@@ -1,19 +1,27 @@
-#include <stdbool.h>
-#include <stdio.h>
-
+#include "../../headers/B_tree.h"
 #include "../../headers/IO.h"
 #include "../../headers/registro.h"
 
-// Função auxiliar para fechar os arquivos
-void close_files(FILE *f_entrada, FILE *f_arvore_b) {
-  if (f_entrada)
-    fclose(f_entrada);
-  if (f_arvore_b)
-    fclose(f_arvore_b);
+// Função auxiliar para evitar repetição quando há falha no processamento do
+// arquivo
+void falha_processamento_arquivo(FILE **f1, FILE **f2) {
+  if (f1 != NULL && *f1 != NULL) {
+    fclose(*f1);
+    *f1 = NULL;
+  }
+  if (f2 != NULL && *f2 != NULL) {
+    fclose(*f2);
+    *f2 = NULL;
+  }
+
+  printf("Falha no processamento do arquivo.");
 }
 
 // Função principal para converter o arquivo .csv para .bin
 void create_index_ab() {
+  FILE *f_entrada = NULL;
+  FILE *f_arvore_b = NULL;
+
   // Leitura dos nomes dos arquivos binários de entrada e de indexação da árvore
   // B
   char nome_entrada[50];
@@ -23,48 +31,30 @@ void create_index_ab() {
     return;
 
   // Abertura do arquivo binário de entrada para leitura
-  FILE *f_entrada = fopen(nome_entrada, "rb");
+  f_entrada = fopen(nome_entrada, "rb");
   if (f_entrada == NULL) {
-    printf("Falha no processamento do arquivo.\n");
+    falha_processamento_arquivo(&f_entrada, &f_arvore_b);
     return;
   }
 
   // Criação do arquivo da árvore B com escrita binária
-  FILE *f_arvore_b = fopen(nome_arvore_b, "wb");
+  f_arvore_b = fopen(nome_arvore_b, "wb");
   if (f_arvore_b == NULL) {
-    fclose(f_entrada);
-    printf("Falha na criação do arquivo.\n");
+    falha_processamento_arquivo(&f_entrada, &f_arvore_b);
     return;
   }
 
-  // Escrita do registro de cabeçalho inicialização
-  {
-    // Escreve o nó raiz como -1, já que a árvore começa vazia
-    int noRaiz = -1;
-    fwrite(&noRaiz, sizeof(int), 1, f_arvore_b);
+  // Cria a struct do cabeçalho do arquivo de entrada
+  CAB cab_entrada;
+  ler_cab_bin(f_entrada, &cab_entrada);
 
-    // Escreve -1 como o RRN do topo da pilha de registros logicamente removidos
-    // pois está vazia
-    int topo = -1;
-    fwrite(&topo, sizeof(int), 1, f_arvore_b);
+  tornar_inconsistente(f_arvore_b);
 
-    // Escreve o número de nós como 0 já que a árvore está vazia
-    int nroNos = 0;
-    fwrite(&nroNos, sizeof(int), 1, f_arvore_b);
-  }
+  // Cria a struct do cabeçalho do arquivo da árvore B
+  HEADER_B_TREE cab_arvore_b;
+  construir_cab_ab(&cab_arvore_b, '0', -1, -1, 0, 0);
 
-  // Pula o cabeçalho do arquivo de entrada
-  fseek(f_entrada, TAM_CABECALHO, SEEK_SET);
-
-  // Vai para o campo proxRRN do registro de cabeçalho do arquivo de entrada
-  // para ler quantos registros existem
-  int reg_count = 0;
-  fseek(f_entrada, POS_PROX_RRN, SEEK_SET);
-  if (fread(&reg_count, sizeof(int), 1, f_entrada) != 1) {
-    printf("Falha no processamento do arquivo.\n");
-    close_files(f_entrada, f_arvore_b);
-    return;
-  }
+  escrever_cab_ab(f_arvore_b, &cab_arvore_b);
 
   // Struct registro auxiliar para ler os registros do arquivo de entrada
   REG registro;
@@ -73,17 +63,18 @@ void create_index_ab() {
   fseek(f_entrada, TAM_CABECALHO, SEEK_SET);
 
   // Itera sobre os registros do arquivo de entrada e os insere na árvore B
-  for (int RRN = 0; RRN < reg_count; RRN++) {
+  for (int RRN = 0; RRN < cab_entrada.proxRRN; RRN++) {
     // Lê o registro do arquivo de entrada para a struct registro
-    if (!read_from_bin(f_entrada, &registro)) {
-      printf("Falha na leitura do arquivo");
-      close_files(f_entrada, f_arvore_b);
+    if (!ler_reg_bin(f_entrada, &registro)) {
+      falha_processamento_arquivo(&f_entrada, &f_arvore_b);
       return;
     };
 
     // O registro só é impresso se não estiver removido
     if (registro.removido == '0') {
-      // INSERIR NA ARVORE B
+
+      // KEY key = {codEst, REG_BYTE_OFFSET(RNN)};
+      // inserir_bt(f_bt, &cab_bt, key)
     }
   }
 

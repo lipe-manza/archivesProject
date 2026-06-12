@@ -7,59 +7,117 @@
 
 #include "../../headers/hash_tables.h"
 
-bool read_from_bin(FILE *p_bin, REG *reg) {
+// ---------- FUNÇÕES DE CABEÇALHO ----------
 
-  long pos_inicial = ftell(p_bin);
+bool construir_cab(CAB *cabecalho, char status, int topo, int proxRRN,
+                   int nroEstacoes, int nroParesEstacoes) {
+  if (cabecalho == NULL)
+    return false;
 
-  if (fread(&reg->removido, sizeof(reg->removido), 1, p_bin) != 1)
+  cabecalho->status = status;
+  cabecalho->topo = topo;
+  cabecalho->proxRRN = proxRRN;
+  cabecalho->nroEstacoes = nroEstacoes;
+  cabecalho->nroParesEstacoes = nroParesEstacoes;
+  return true;
+}
+
+bool read_cab_bin(FILE *f_bin, CAB *cab) {
+  // Verifica se o arquivo e o cabeçalho são válidos
+  if (f_bin == NULL || cab == NULL)
+    return false;
+
+  // Vai para o início da página, onde está o cabeçalho
+  fseek(f_bin, 0, SEEK_SET);
+
+  if (fread(&cab->status, sizeof(cab->status), 1, f_bin) != 1)
+    return false;
+  if (fread(&cab->topo, sizeof(cab->topo), 1, f_bin) != 1)
+    return false;
+  if (fread(&cab->proxRRN, sizeof(cab->proxRRN), 1, f_bin) != 1)
+    return false;
+  if (fread(&cab->nroEstacoes, sizeof(cab->nroEstacoes), 1, f_bin) != 1)
+    return false;
+  if (fread(&cab->nroParesEstacoes, sizeof(cab->nroParesEstacoes), 1, f_bin) !=
+      1)
+    return false;
+
+  return true;
+}
+
+void write_cab_bin(FILE *f_bin, CAB *cab) {
+  // Verifica se o arquivo e o cabeçalho são válidos
+  if (f_bin == NULL || cab == NULL)
+    return;
+
+  // Vai para o início da página, onde está o cabeçalho
+  fseek(f_bin, 0, SEEK_SET);
+
+  fwrite(&cab->status, sizeof(cab->status), 1, f_bin);
+  fwrite(&cab->topo, sizeof(cab->topo), 1, f_bin);
+  fwrite(&cab->proxRRN, sizeof(cab->proxRRN), 1, f_bin);
+  fwrite(&cab->nroEstacoes, sizeof(cab->nroEstacoes), 1, f_bin);
+  fwrite(&cab->nroParesEstacoes, sizeof(cab->nroParesEstacoes), 1, f_bin);
+}
+
+// ---------- FUNÇÕES DE REGISTRO ----------
+
+bool read_reg_bin(FILE *f_bin, REG *reg) {
+  // Verifica se o arquivo e o registro são válidos
+  if (f_bin == NULL || reg == NULL)
+    return false;
+
+  long pos_inicial = ftell(f_bin);
+
+  if (fread(&reg->removido, sizeof(reg->removido), 1, f_bin) != 1)
     return false;
   // Caso o registro esteja marcado como removido, pular
   if (reg->removido == '1') {
-    fseek(p_bin, TAM_REGISTRO - 1, SEEK_CUR);
+    fseek(f_bin, TAM_REGISTRO - 1, SEEK_CUR);
     return true;
   }
-  if (fread(&reg->proximo, sizeof(reg->proximo), 1, p_bin) != 1)
+  if (fread(&reg->proximo, sizeof(reg->proximo), 1, f_bin) != 1)
     return false;
-  if (fread(&reg->codEstacao, sizeof(reg->codEstacao), 1, p_bin) != 1)
+  if (fread(&reg->codEstacao, sizeof(reg->codEstacao), 1, f_bin) != 1)
     return false;
-  if (fread(&reg->codLinha, sizeof(reg->codLinha), 1, p_bin) != 1)
+  if (fread(&reg->codLinha, sizeof(reg->codLinha), 1, f_bin) != 1)
     return false;
-  if (fread(&reg->codProxEstacao, sizeof(reg->codProxEstacao), 1, p_bin) != 1)
+  if (fread(&reg->codProxEstacao, sizeof(reg->codProxEstacao), 1, f_bin) != 1)
     return false;
-  if (fread(&reg->distProxEstacao, sizeof(reg->distProxEstacao), 1, p_bin) != 1)
+  if (fread(&reg->distProxEstacao, sizeof(reg->distProxEstacao), 1, f_bin) != 1)
     return false;
-  if (fread(&reg->codLinhaIntegra, sizeof(reg->codLinhaIntegra), 1, p_bin) != 1)
+  if (fread(&reg->codLinhaIntegra, sizeof(reg->codLinhaIntegra), 1, f_bin) != 1)
     return false;
-  if (fread(&reg->codEstIntegra, sizeof(reg->codEstIntegra), 1, p_bin) != 1)
+  if (fread(&reg->codEstIntegra, sizeof(reg->codEstIntegra), 1, f_bin) != 1)
     return false;
 
-  if (fread(&reg->tamNomeEstacao, sizeof(reg->tamNomeEstacao), 1, p_bin) != 1)
+  if (fread(&reg->tamNomeEstacao, sizeof(reg->tamNomeEstacao), 1, f_bin) != 1)
     return false;
   if (reg->tamNomeEstacao > 0) {
-    if (fread(reg->nomeEstacao, sizeof(char), reg->tamNomeEstacao, p_bin) !=
+    if (fread(reg->nomeEstacao, sizeof(char), reg->tamNomeEstacao, f_bin) !=
         (size_t)reg->tamNomeEstacao)
       return false;
     reg->nomeEstacao[reg->tamNomeEstacao] = '\0'; // coloca \0 na string
   } else
     reg->nomeEstacao[0] = '\0';
 
-  if (fread(&reg->tamNomeLinha, sizeof(reg->tamNomeLinha), 1, p_bin) != 1)
+  if (fread(&reg->tamNomeLinha, sizeof(reg->tamNomeLinha), 1, f_bin) != 1)
     return false;
   if (reg->tamNomeLinha > 0) {
-    if (fread(reg->nomeLinha, sizeof(char), reg->tamNomeLinha, p_bin) !=
+    if (fread(reg->nomeLinha, sizeof(char), reg->tamNomeLinha, f_bin) !=
         (size_t)reg->tamNomeLinha)
       return false;
     reg->nomeLinha[reg->tamNomeLinha] = '\0'; // coloca \0 na string
   } else
     reg->nomeLinha[0] = '\0';
 
-  long bytes_lidos = ftell(p_bin) - pos_inicial;
+  long bytes_lidos = ftell(f_bin) - pos_inicial;
 
   long bytes_restantes = TAM_REGISTRO - bytes_lidos;
 
   if (bytes_restantes > 0) {
     char lixo[bytes_restantes];
-    if (fread(lixo, sizeof(char), bytes_restantes, p_bin) !=
+    if (fread(lixo, sizeof(char), bytes_restantes, f_bin) !=
         (size_t)bytes_restantes) {
       return false;
     }
@@ -100,8 +158,12 @@ void write_in_bin(FILE *f_bin, REG *reg) {
   }
 }
 
-void atualizar_registro(FILE *f_bin, int RRN, REG *registro, bool atualizar[],
+bool atualizar_registro(FILE *f_bin, int RRN, REG *registro, bool atualizar[],
                         REG *atualizado) {
+  // Verifica se o arquivo e o registro são válidos
+  if (f_bin == NULL || registro == NULL)
+    return false;
+
   // Atualiza os campos do registro de acordo com o array atualizar
   if (atualizar[0])
     registro->codEstacao = atualizado->codEstacao;
@@ -128,6 +190,7 @@ void atualizar_registro(FILE *f_bin, int RRN, REG *registro, bool atualizar[],
   // Sobrescreve o registro atualizado no arquivo .bin
   fseek(f_bin, TAM_CABECALHO + (RRN * TAM_REGISTRO), SEEK_SET);
   write_in_bin(f_bin, registro);
+  return true;
 }
 
 bool atualizar_estacoes(FILE *f_bin) {

@@ -1,5 +1,3 @@
-#include <stdbool.h>
-#include <stdio.h>
 #include <string.h>
 
 #include "../../headers/IO.h"
@@ -7,24 +5,35 @@
 #include "../../headers/registro.h"
 #include "../../headers/sql_functions.h"
 
-// Função auxiliar para fechar os arquivos
-void close_files(FILE *f_bin, FILE *f_csv) {
-  if (f_bin)
-    fclose(f_bin);
-  if (f_csv)
-    fclose(f_csv);
-}
+// Função auxiliar para evitar repetição quando há falha no processamento do
+// arquivo
+void falha_processamento_arquivo(FILE **f1, FILE **f2, HashEstacao **hash_est,
+                                 HashPar **hash_par) {
+  if (f1 != NULL && *f1 != NULL) {
+    fclose(*f1);
+    *f1 = NULL;
+  }
+  if (f2 != NULL && *f2 != NULL) {
+    fclose(*f2);
+    *f2 = NULL;
+  }
 
-// Função auxiliar para liberar a memória das hash tables
-void free_tables(HashEstacao *hash_single, HashPar *hash_pair) {
-  if (hash_single)
-    free_hash_estacao(hash_single);
-  if (hash_pair)
-    free_hash_par(hash_pair);
+  if (hash_est != NULL)
+    free_hash_estacao(*hash_est);
+
+  if (hash_par != NULL)
+    free_hash_par(*hash_par);
+
+  printf("Falha no processamento do arquivo.");
 }
 
 // Função principal para converter o arquivo .csv para .bin
 void create_table() {
+  FILE *f_csv = NULL;
+  FILE *f_bin = NULL;
+  HashEstacao *hash_est = NULL;
+  HashPar *hash_par = NULL;
+
   // Leitura dos nomes dos arquivos .csv e .bin
   char bin_name[50];
   char csv_name[50];
@@ -32,62 +41,47 @@ void create_table() {
     return;
 
   // Cria as hashtables para contar as estações e pares de estações únicas
-  HashEstacao *hash_single = criar_hash_estacao();
-  HashPar *hash_pair = criar_hash_par();
+  hash_est = criar_hash_estacao();
+  hash_par = criar_hash_par();
 
   // Encerra o programa em caso de falha de alocação de alguma das hashtables
-  if (hash_single == NULL || hash_pair == NULL) {
-    free_tables(hash_single, hash_pair);
-    printf("Falha no processamento do arquivo.\n");
+  if (hash_est == NULL || hash_par == NULL) {
+    falha_processamento_arquivo(&f_csv, &f_bin, &hash_est, &hash_par);
     return;
   }
 
   // Abertura do arquivo .csv para leitura
-  FILE *f_csv = fopen(csv_name, "r");
+  f_csv = fopen(csv_name, "r");
   if (f_csv == NULL) {
-    free_tables(hash_single, hash_pair);
-    printf("Falha no processamento do arquivo.\n");
+    falha_processamento_arquivo(&f_csv, &f_bin, &hash_est, &hash_par);
     return;
   }
 
   // Criação do arquivo .bin com escrita binária
-  FILE *f_bin = fopen(bin_name, "wb");
+  f_bin = open_bin(bin_name, "wb");
   if (f_bin == NULL) {
-    free_tables(hash_single, hash_pair);
-    fclose(f_csv);
-    printf("Falha na criação do arquivo.\n");
+    falha_processamento_arquivo(&f_csv, &f_bin, &hash_est, &hash_par);
     return;
   }
 
-  // Escrita do registro de cabeçalho inicialização
-  {
-    // Escreve o valor -1 no topo da lista de removidos, indicando que não há
-    // registros removidos
-    int topo = -1;
-    fwrite(&topo, sizeof(int), 1, f_bin);
+  tornar_inconsistente(f_bin);
 
-    // Escreve o próximo RRN como -1
-    int proxRRN = -1;
-    fwrite(&proxRRN, sizeof(int), 1, f_bin);
+  // Constrói e escreve o cabeçalho no arquivo
+  CAB cabecalho;
 
-    // Escreve o número de estações únicas como 0
-    int numEst = 0;
-    fwrite(&numEst, sizeof(int), 1, f_bin);
+  // status = 0; topo = -1; proxRRN = 0; nroEstacoes = 0; nroParesEstacao = 0;
+  construir_cab(&cabecalho, '0', -1, 0, 0, 0);
 
-    // Escreve o número de pares únicos de estações como 0
-    int numParEst = 0;
-    fwrite(&numParEst, sizeof(int), 1, f_bin);
-  }
+  escrever_cab_bin(f_bin, &cabecalho);
 
-  // Variaveis auxiliares
+  // Variáveis auxiliares
   char buffer[256];
 
   REG registro;
-  int reg_count = 0;
 
   // Pula a linha de cabeçalho do arquivo .csv
   if (fgets(buffer, sizeof(buffer), f_csv) == NULL) {
-    printf("Falha no processamento do arquivo.\n");
+    falha_processamento_arquivo(&f_csv, &f_bin, &hash_est, &hash_par);
     return;
   }
 
@@ -112,10 +106,7 @@ void create_table() {
     // inteiro e salva no registro auxiliar
     token = strsep(&p, ",");
     if (token == NULL) {
-      free_tables(hash_single, hash_pair);
-      fclose(f_csv);
-      fclose(f_bin);
-      printf("Falha no processamento do arquivo.");
+      falha_processamento_arquivo(&f_csv, &f_bin, &hash_est, &hash_par);
       return;
     }
     registro.codEstacao = satoi(token, -1);
@@ -124,10 +115,7 @@ void create_table() {
     // e salva o tamanho e a string no registro auxiliar
     token = strsep(&p, ",");
     if (token == NULL) {
-      free_tables(hash_single, hash_pair);
-      fclose(f_csv);
-      fclose(f_bin);
-      printf("Falha no processamento do arquivo.");
+      falha_processamento_arquivo(&f_csv, &f_bin, &hash_est, &hash_par);
       return;
     }
     registro.tamNomeEstacao = strlen(token);
@@ -137,10 +125,7 @@ void create_table() {
     // e salva no registro auxiliar
     token = strsep(&p, ",");
     if (token == NULL) {
-      free_tables(hash_single, hash_pair);
-      fclose(f_csv);
-      fclose(f_bin);
-      printf("Falha no processamento do arquivo.");
+      falha_processamento_arquivo(&f_csv, &f_bin, &hash_est, &hash_par);
       return;
     }
     registro.codLinha = satoi(token, -1);
@@ -160,10 +145,7 @@ void create_table() {
     // inteiro e salva no registro auxiliar
     token = strsep(&p, ",");
     if (token == NULL) {
-      free_tables(hash_single, hash_pair);
-      fclose(f_csv);
-      fclose(f_bin);
-      printf("Falha no processamento do arquivo.");
+      falha_processamento_arquivo(&f_csv, &f_bin, &hash_est, &hash_par);
       return;
     }
     registro.codProxEstacao = satoi(token, -1);
@@ -172,10 +154,7 @@ void create_table() {
     // para inteiro e salva no registro auxiliar
     token = strsep(&p, ",");
     if (token == NULL) {
-      free_tables(hash_single, hash_pair);
-      fclose(f_csv);
-      fclose(f_bin);
-      printf("Falha no processamento do arquivo.");
+      falha_processamento_arquivo(&f_csv, &f_bin, &hash_est, &hash_par);
       return;
     }
     registro.distProxEstacao = satoi(token, -1);
@@ -184,10 +163,7 @@ void create_table() {
     // para inteiro E salva no registro auxiliar
     token = strsep(&p, ",");
     if (token == NULL) {
-      free_tables(hash_single, hash_pair);
-      fclose(f_csv);
-      fclose(f_bin);
-      printf("Falha no processamento do arquivo.");
+      falha_processamento_arquivo(&f_csv, &f_bin, &hash_est, &hash_par);
       return;
     }
     registro.codLinhaIntegra = satoi(token, -1);
@@ -196,10 +172,7 @@ void create_table() {
     // para inteiro E salva no registro auxiliar
     token = strsep(&p, ",");
     if (token == NULL) {
-      free_tables(hash_single, hash_pair);
-      fclose(f_csv);
-      fclose(f_bin);
-      printf("Falha no processamento do arquivo.");
+      falha_processamento_arquivo(&f_csv, &f_bin, &hash_est, &hash_par);
       return;
     }
     // Limpa o último token, caso ainda tenha sobrado quebras de linha
@@ -207,40 +180,34 @@ void create_table() {
     registro.codEstIntegra = satoi(token, -1);
 
     // Escreve o registro no arquivo binário
-    write_in_bin(f_bin, &registro);
+    escrever_reg_bin(f_bin, &registro);
 
-    inserir_estacao(hash_single, registro.nomeEstacao);
-    inserir_par(hash_pair, registro.codEstacao, registro.codProxEstacao);
+    inserir_estacao(hash_est, registro.nomeEstacao);
+    inserir_par(hash_par, registro.codEstacao, registro.codProxEstacao);
 
-    reg_count++;
+    cabecalho.proxRRN++;
   }
 
-  // Escrita do registro de cabeçalho
+  // Atualização dos campos do cabeçalho
+  cabecalho.nroEstacoes = get_nro_estacoes(hash_est);
+  cabecalho.nroParesEstacoes = get_nro_pares(hash_par);
 
-  // Aponta para o inicio do arquivo binário e escreve o status como
-  // consistente pois o arquivo foi escrito com sucesso
-  fseek(f_bin, 0, SEEK_SET);
-  status = '1';
-  fwrite(&status, sizeof(char), 1, f_bin);
-  // Pula o topo ja que ja foi escrito
-  fseek(f_bin, sizeof(int), SEEK_CUR);
-
-  // Escreve o próximo RRN
-  fwrite(&reg_count, sizeof(int), 1, f_bin);
-
-  // Escreve o número de estações únicas
-  int nroEstacoes = get_nro_estacoes(hash_single);
-  fwrite(&nroEstacoes, sizeof(int), 1, f_bin);
-
-  // Escreve o número de pares únicos de estações
-  int nroParesEstacao = get_nro_pares(hash_pair);
-  fwrite(&nroParesEstacao, sizeof(int), 1, f_bin);
+  // Atualiza e escreve o cabeçalho
+  cabecalho.status = '1';
+  escrever_cab_bin(f_bin, &cabecalho);
 
   // Fecha os arquivos e desaloca as hashtables
-  close_files(f_bin, f_csv);
-  free_tables(hash_single, hash_pair);
+  fclose(f_csv);
+  f_csv = NULL;
+
+  fclose(f_bin);
+  f_bin = NULL;
+
+  free_hash_estacao(hash_est);
+  hash_est = NULL;
+
+  free_hash_par(hash_par);
+  hash_par = NULL;
 
   BinarioNaTela(bin_name);
-
-  return;
 }

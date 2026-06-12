@@ -4,53 +4,44 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "../headers/IO.h"
+#include "../../headers/IO.h"
 
 FILE *open_bin(char *bin_name, char *mode) {
   // Tenta abrir o arquivo binário para mode
   FILE *f_bin = fopen(bin_name, mode);
 
-  // Trata do caso de criação de um arquivo binário
-  if (strcmp(mode, "wb") == 0) {
-    if (f_bin == NULL) {
-      printf("Falha na criação do arquivo.\n");
-      return NULL;
-    }
+  // Verifica se o arquivo pode ser aberto
+  if (f_bin == NULL) {
+    printf("Falha no processamento do arquivo.");
+    return NULL;
   }
-  // Caso de leitura e escrita binária
-  else if (strcmp(mode, "rb+") == 0) {
-    if (f_bin == NULL) {
-      printf("Falha no processamento do arquivo.\n");
-      return NULL;
-    }
 
-    // Lê o status do arquivo
-    char status;
-    if (fread(&status, sizeof(char), 1, f_bin) != 1) {
-      printf("Falha no processamento do arquivo.\n");
-      fclose(f_bin);
-      return NULL;
-    }
+  // Verifica se o arquivo não está sendo aberto para criação
+  if (mode[0] != 'w') {
+    char status = '0';
 
-    // Se for '0' está inconsistente
+    fread(&status, sizeof(char), 1, f_bin);
+
+    // Se o status estiver inconsistente, o arquivo não pode ser usado
     if (status == '0') {
-      printf("Falha no processamento do arquivo.\n");
-      fclose(f_bin);
+      printf("Falha no processamento do arquivo");
       return NULL;
     }
   }
 
-  // Define o arquivo como inconsistente
+  fseek(f_bin, -1, SEEK_CUR);
+
+  return f_bin;
+}
+
+void tornar_inconsistente(FILE *f_bin) {
+  long pos = ftell(f_bin);
   char status = '0';
 
-  fseek(f_bin, 0, SEEK_SET);
   fwrite(&status, sizeof(char), 1, f_bin);
   fflush(f_bin);
 
-  // Volta para o início do arquivo
-  // fseek(f_bin, 0, SEEK_SET);
-
-  return f_bin;
+  fseek(f_bin, pos, SEEK_SET);
 }
 
 void print_registro_in_terminal(REG *registro) {

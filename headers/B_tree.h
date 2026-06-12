@@ -25,11 +25,16 @@
 
 typedef struct header_B_tree {
   char status;
-  int rootPage;
-  int topOfStack;
-  int nextRRN;
-  int numOfPages;
+  int noRaiz;
+  int topo;
+  int proxRRN;
+  int nroNos;
 } HEADER_B_TREE;
+
+bool construir_cab_ab(HEADER_B_TREE *cabecalho, char status, int raiz, int topo,
+                      int proxRRN, int nroNos);
+
+void escrever_cab_ab(FILE *f_ab, HEADER_B_TREE *cabecalho);
 
 #define PAGE_SIZE_B_TREE 53
 

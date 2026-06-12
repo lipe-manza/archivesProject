@@ -1,35 +1,47 @@
-#include <stdbool.h>
-#include <stdio.h>
-
 #include "../../headers/IO.h"
 #include "../../headers/filtro.h"
 #include "../../headers/registro.h"
 #include "../../headers/sql_functions.h"
 
-void update_loop(FILE *f_bin, int reg_count, bool *search, REG *filter,
+// Função auxiliar para evitar repetição quando há falha no processamento do
+// arquivo
+void falha_processamento_arquivo(FILE **f) {
+  if (f != NULL && *f != NULL) {
+    fclose(*f);
+    *f = NULL;
+  }
+
+  printf("Falha no processamento do arquivo.");
+}
+
+void update_loop(FILE *f_bin, CAB cabecalho, bool *search, REG *filter,
                  bool *update, REG *updated) {
+  if (f_bin == NULL || search == NULL || filter == NULL || update == NULL ||
+      updated == NULL)
+    return;
+
   // Struct registro auxiliar para ler o binário
   REG registro;
 
   // Itera pelos registros do .bin
-  for (int RRN = 0; RRN < reg_count; RRN++) {
+  for (int RRN = 0; RRN < cabecalho.proxRRN; RRN++) {
     // Lê o registro do .bin para a struct registro
-    read_from_bin(f_bin, &registro);
+    ler_reg_bin(f_bin, &registro);
 
     // Se o registro está removido ele é pulado
     if (registro.removido == '1')
       continue;
 
     if (match_filter(&registro, search, filter))
-      update_bin(f_bin, RRN, &registro, update, updated);
+      atualizar_reg_bin(f_bin, RRN, &registro, update, updated);
   }
 }
 
 void update_set_where() {
-  // Variável para guardar o nome do arquivo .bin
-  char bin_name[50];
+  FILE *f_bin = NULL;
 
   // Lê o nome do arquivo binário
+  char bin_name[50];
   if (scanf("%s", bin_name) != 1) {
     printf("Falha na leitura do nome do arquivo.\n");
     return;
@@ -37,21 +49,17 @@ void update_set_where() {
 
   // Abre o arquivo .bin para leitura e escrita e verifica se a abertura
   // foi bem sucedida conferindo o status do arquivo
-  FILE *f_bin = open_bin(bin_name, "rb+");
+  f_bin = open_bin(bin_name, "rb+");
   if (f_bin == NULL) {
-    printf("Falha no processamento do arquivo.\n");
+    falha_processamento_arquivo(&f_bin);
     return;
   }
 
-  // Vai para o campo proxRRN do registro de cabeçalho para ler quantos
-  // registros existem
-  int reg_count = 0;
-  fseek(f_bin, 5, SEEK_SET);
-  if (fread(&reg_count, sizeof(int), 1, f_bin) != 1) {
-    printf("Falha no processamento do arquivo.\n");
-    fclose(f_bin);
-    return;
-  }
+  tornar_inconsistente(f_bin);
+
+  // Cria a struct do cabeçalho lendo do arquivo binário
+  CAB cabecalho;
+  ler_cab_bin(f_bin, &cabecalho);
 
   // Lê o número de atualizações a serem feitas
   int n;
@@ -87,10 +95,9 @@ void update_set_where() {
   // cabeçalho
   atualizar_estacoes(f_bin);
 
-  // Define o arquivo binário como consistente no registro de cabeçalho
-  fseek(f_bin, 0, SEEK_SET);
-  char status = '1';
-  fwrite(&status, sizeof(char), 1, f_bin);
+  // Atualiza e escreve o cabeçalho
+  cabecalho.status = '1';
+  escrever_cab_bin(f_bin, &cabecalho);
 
   // Fecha o arquivo .bin
   fclose(f_bin);
