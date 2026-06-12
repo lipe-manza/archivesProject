@@ -122,6 +122,19 @@ bool write_B_tree_header_in_bin(FILE *f_arvore_B, HEADER_BT *header) {
   return true;
 }
 
+
+
+void builder_header_B_tree(HEADER_BT *header, char status, int rootPage,
+                           int topOfStack, int nextRRN, int numOfPages) {
+  header->status = status;
+  header->rootPage = rootPage;
+  header->topOfStack = topOfStack;
+  header->nextRRN = nextRRN;
+  header->numOfPages = numOfPages;
+}
+
+
+
 int get_next_available_RRN_in_B_tree(FILE *f_arvore_B, HEADER_BT *header) {
 
   int rrn_disponivel;

@@ -51,10 +51,10 @@ void create_index_ab() {
   tornar_inconsistente(f_arvore_b);
 
   // Cria a struct do cabeçalho do arquivo da árvore B
-  HEADER_B_TREE cab_arvore_b;
-  construir_cab_ab(&cab_arvore_b, '0', -1, -1, 0, 0);
+  HEADER_BT headerBt;
+  builder_header_B_tree(&headerBt, '0', -1, -1, 0, 0);
 
-  escrever_cab_ab(f_arvore_b, &cab_arvore_b);
+  write_B_tree_header_in_bin(f_arvore_b, &headerBt);
 
   // Struct registro auxiliar para ler os registros do arquivo de entrada
   REG registro;

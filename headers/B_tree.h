@@ -84,6 +84,8 @@ int get_next_available_RRN_in_B_tree(FILE *f_arvore_B, HEADER_BT *header);
 int get_filepointer_value_from_key(FILE *f_arvore_B, int key, int rrn,
                                    int index);
 
+void builder_header_B_tree(HEADER_BT *header, char status, int rootPage,
+                           int topOfStack, int nextRRN, int numOfPages);
 /* Inserir */
 
 #define PROMOTION 1
