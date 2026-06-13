@@ -4,15 +4,15 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "../../headers/IO.h"
+#include "../../include/IO.h"
 
-FILE *open_bin(char *bin_name, char *mode) {
-  // Tenta abrir o arquivo binário para mode
+FILE *open_binary_file(char *bin_name, char *mode) {
+  // Tenta abrir o arquivo binário com o modo especificado
   FILE *f_bin = fopen(bin_name, mode);
 
   // Verifica se o arquivo pode ser aberto
   if (f_bin == NULL) {
-    printf("Falha no processamento do arquivo.");
+    printf("Falha no processamento do arquivo.\n");
     return NULL;
   }
 
@@ -24,66 +24,83 @@ FILE *open_bin(char *bin_name, char *mode) {
 
     // Se o status estiver inconsistente, o arquivo não pode ser usado
     if (status == '0') {
-      printf("Falha no processamento do arquivo");
+      printf("Falha no processamento do arquivo.\n");
+      fclose(f_bin);
       return NULL;
     }
   }
 
-  fseek(f_bin, -1, SEEK_CUR);
+  // Retorna com segurança para o início do arquivo
+  fseek(f_bin, 0, SEEK_SET);
 
   return f_bin;
 }
 
-void tornar_inconsistente(FILE *f_bin) {
+void mark_file_inconsistent(FILE *f_bin) {
+  if (f_bin == NULL)
+    return;
+
   long pos = ftell(f_bin);
   char status = '0';
 
+  // Volta para o byte 0 antes de escrever a flag de status inconsistente
+  fseek(f_bin, 0, SEEK_SET);
   fwrite(&status, sizeof(char), 1, f_bin);
   fflush(f_bin);
 
+  // Retorna para a posição original onde a função foi chamada
   fseek(f_bin, pos, SEEK_SET);
 }
 
-void print_registro_in_terminal(REG *registro) {
+void display_data_record(const DataRecord *record) {
+  if (record == NULL)
+    return;
+
   // Nao podem ser nulos
-  printf("%d ", registro->codEstacao);
-  printf("%s ", registro->nomeEstacao);
+  printf("%d ", data_record_get_codEstacao(record));
+  printf("%s ", data_record_get_nomeEstacao(record));
 
   // Código da Linha
-  if (registro->codLinha == -1)
+  int line_code = data_record_get_codLinha(record);
+  if (line_code == -1)
     printf("NULO ");
   else
-    printf("%d ", registro->codLinha);
+    printf("%d ", line_code);
 
   // Nome da Linha
-  if (registro->tamNomeLinha == 0)
+  const char *line_name = data_record_get_nomeLinha(record);
+  if (line_name == NULL || strlen(line_name) == 0)
     printf("NULO ");
   else
-    printf("%s ", registro->nomeLinha);
+    printf("%s ", line_name);
 
   // Código da próxima estação
-  if (registro->codProxEstacao == -1)
+  int next_station_code = data_record_get_codProxEstacao(record);
+  if (next_station_code == -1)
     printf("NULO ");
   else
-    printf("%d ", registro->codProxEstacao);
+    printf("%d ", next_station_code);
 
   // Distância da próxima estação
-  if (registro->distProxEstacao == -1)
+  int next_station_dist = data_record_get_distProxEstacao(record);
+  if (next_station_dist == -1)
     printf("NULO ");
   else
-    printf("%d ", registro->distProxEstacao);
+    printf("%d ", next_station_dist);
 
   // Código da linha integrante
-  if (registro->codLinhaIntegra == -1)
+  int integ_line_code = data_record_get_codLinhaIntegra(record);
+  if (integ_line_code == -1)
     printf("NULO ");
   else
-    printf("%d ", registro->codLinhaIntegra);
+    printf("%d ", integ_line_code);
 
   // Código da Estação que faz a integrante
-  if (registro->codEstIntegra == -1)
+  int integ_station_code = data_record_get_codEstIntegra(record);
+  if (integ_station_code == -1)
     printf("NULO");
   else
-    printf("%d", registro->codEstIntegra);
+    printf("%d", integ_station_code);
 
   printf("\n");
 }
@@ -170,48 +187,47 @@ void ScanQuoteString(char *str) {
   }
 }
 
-void read_new_registro_from_terminal(REG *new_registro) {
-  char str[40];
+void read_data_record_from_stdin(DataRecord *new_record) {
+  if (new_record == NULL)
+    return;
 
-  // Le o codEstacao
+  char str[51];
+
+  // Lê codEstacao
   ScanQuoteString(str);
-  new_registro->codEstacao = strlen(str) > 0 ? atoi(str) : -1;
+  data_record_set_codEstacao(new_record, strlen(str) > 0 ? atoi(str) : -1);
 
-  // Le o codEstacao
+  // Lê nomeEstacao
   ScanQuoteString(str);
-  new_registro->tamNomeEstacao = strlen(str);
-  strcpy(new_registro->nomeEstacao, str);
+  data_record_set_nomeEstacao(new_record, str);
 
-  // Le o codLinha
+  // Lê codLinha
   ScanQuoteString(str);
-  new_registro->codLinha = strlen(str) > 0 ? atoi(str) : -1;
+  data_record_set_codLinha(new_record, strlen(str) > 0 ? atoi(str) : -1);
 
-  // Le o nomeLinha
+  // Lê nomeLinha
   ScanQuoteString(str);
-  new_registro->tamNomeLinha = strlen(str);
-  strcpy(new_registro->nomeLinha, str);
+  data_record_set_nomeLinha(new_record, str);
 
-  // Le o codProxEstacao
+  // Lê codProxEstacao
   ScanQuoteString(str);
-  new_registro->codProxEstacao = strlen(str) > 0 ? atoi(str) : -1;
+  data_record_set_codProxEstacao(new_record, strlen(str) > 0 ? atoi(str) : -1);
 
-  // Le o distProxEstacao
+  // Lê distProxEstacao
   ScanQuoteString(str);
-  new_registro->distProxEstacao = strlen(str) > 0 ? atoi(str) : -1;
+  data_record_set_distProxEstacao(new_record, strlen(str) > 0 ? atoi(str) : -1);
 
-  // Le o codLinhaIntegra
+  // Lê codLinhaIntegra
   ScanQuoteString(str);
-  new_registro->codLinhaIntegra = strlen(str) > 0 ? atoi(str) : -1;
+  data_record_set_codLinhaIntegra(new_record, strlen(str) > 0 ? atoi(str) : -1);
 
-  // Le o codEstIntegra
+  // Lê codEstIntegra
   ScanQuoteString(str);
-  new_registro->codEstIntegra = strlen(str) > 0 ? atoi(str) : -1;
-
-  return;
+  data_record_set_codEstIntegra(new_record, strlen(str) > 0 ? atoi(str) : -1);
 }
 
-// Se a string não for vazia, retorna o atoi
-// Caso contrário retorna o valor padrão fornecido
-int satoi(char *string, int val) {
+int safe_atoi(char *string, int val) {
+  // Se a string não for vazia, retorna o atoi
+  // Caso contrário retorna o valor padrão fornecido
   return strlen(string) > 0 ? atoi(string) : val;
 }

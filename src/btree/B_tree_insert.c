@@ -5,6 +5,48 @@
 #define MAX_KEYS_SPLIT_PAGE (MAX_KEYS_PER_PAGE_B_TREE + 1)
 #define MAX_CHILDREN_SPLIT_PAGE (MAX_CHILDREN_B_TREE + 1)
 
+void insert_bt(FILE *f_bt, HEADER_BT *hdr_bt, KEY *key) {
+  if (f_bt == NULL || hdr_bt == NULL || key == NULL)
+    return;
+
+  int RRN_ant = -1;
+  int RRN = hdr_bt->rootPage;
+
+  // Inserção da primeira chave
+  if (hdr_bt->rootPage == -1) {
+    PAGE page;
+    pag
+  }
+
+  int pos_p = 0;
+  PAGE page;
+
+  while (RRN != 0) {
+    if (!read_B_tree_page_from_bin(f_bt, &page, hdr_bt->rootPage))
+      return; // ERRO NA LEITURA DO ARQUIVO
+
+    for (int i = 0; i < MAX_KEYS_PER_PAGE_B_TREE; i++) {
+      pos_p = 0;
+
+      // Está em um nó folha e há espaço para uma chave
+      if (page.pageType == PAGE_TYPE_LEAF &&
+          page.numOfKeys < MAX_KEYS_PER_PAGE_B_TREE) {
+        // Func aux
+        return;
+      }
+      if (page.keys[i].value == key->value)
+        return; // TENTANDO INSERIR CHAVE QUE JÁ ESTÁ NA BT
+      if (page.keys[i].value < key->value)
+        break;
+      pos_p++;
+      RRN_ant = RRN;
+    }
+    RRN = page.childPointer[pos_p];
+  }
+
+  // Agora reordena
+}
+
 typedef struct splitPage {
   int numOfKeys;
 

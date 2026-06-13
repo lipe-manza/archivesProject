@@ -1,107 +1,153 @@
-#include "../../headers/IO.h"
-#include "../../headers/filtro.h"
-#include "../../headers/sql_functions.h"
+#include <stdbool.h>
+#include <stdio.h>
 
-// Função auxiliar para evitar repetição quando há falha no processamento do
-// arquivo
-void falha_processamento_arquivo(FILE **f) {
-  if (f != NULL && *f != NULL) {
-    fclose(*f);
-    *f = NULL;
+#include "../../include/IO.h"
+#include "../../include/data_header.h"
+#include "../../include/data_record.h"
+#include "../../include/filtro.h"
+#include "../../include/sql_functions.h"
+
+/**
+ * @brief Função auxiliar para evitar repetição quando há falha no
+ * processamento. Libera a memória de arquivos, cabeçalhos e registros de filtro
+ * alocados.
+ */
+void file_processing_failure_where(FILE **f_bin, DataHeader **header,
+                                   DataRecord **filter) {
+  if (f_bin != NULL && *f_bin != NULL) {
+    fclose(*f_bin);
+    *f_bin = NULL;
+  }
+  if (header != NULL) {
+    data_header_destroy(header);
+  }
+  if (filter != NULL) {
+    data_record_destroy(filter);
   }
 
-  printf("Falha no processamento do arquivo.");
+  printf("Falha no processamento do arquivo.\n");
 }
 
-bool search(FILE *f_bin, CAB *cabecalho, bool *search_for, REG *filter) {
-  if (f_bin == NULL || cabecalho == NULL || search_for == NULL ||
-      filter == NULL)
+/**
+ * @brief Itera pelos registros do arquivo binário e imprime aqueles que passam
+ * pelo filtro.
+ * @param f_bin Arquivo binário aberto para leitura.
+ * @param header Cabeçalho do arquivo de dados.
+ * @param search_for Array indicando quais campos devem ser comparados.
+ * @param filter Registro contendo os dados do filtro.
+ * @return true se encontrou pelo menos um registro, false caso contrário.
+ */
+bool search(FILE *f_bin, DataHeader *header, bool *search_for,
+            DataRecord *filter) {
+  if (f_bin == NULL || header == NULL || search_for == NULL || filter == NULL)
     return false;
 
-  // Struct registro auxiliar para ler o .bin
-  REG registro;
+  // Instancia um registro auxiliar para ler os dados do disco
+  DataRecord *record = data_record_create();
+  if (record == NULL)
+    return false;
 
-  bool encontrou = false;
+  bool found = false;
 
-  // Pula para o primeiro Registro
-  fseek(f_bin, TAM_CABECALHO, SEEK_SET);
+  // Pula o cabeçalho e vai para o primeiro Registro
+  fseek(f_bin, HEADER_SIZE, SEEK_SET);
+
+  int max_records = data_header_get_proxRRN(header);
 
   // Itera pelos registros do .bin
-  for (int RRN = 0; RRN < cabecalho->proxRRN; RRN++) {
+  for (int rrn = 0; rrn < max_records; rrn++) {
     // Lê o registro do arquivo binário
-    ler_reg_bin(f_bin, &registro);
-    // Se o registro está removido ele não é selecionado
-    if (registro.removido == '1')
+    if (!data_record_read(f_bin, record)) {
+      break;
+    }
+
+    // Se o registro está removido, ele não é selecionado
+    if (data_record_get_removido(record) == '1')
       continue;
 
-    // Se o registro passa pelo filtro ele é impresso
-    if (match_filter(&registro, search_for, filter)) {
-      encontrou = true;
-      print_registro_in_terminal(&registro);
+    // Se o registro passa pelo filtro, ele é impresso
+    if (match_filter(record, search_for, filter)) {
+      found = true;
+      display_data_record(record);
 
-      // Se achou o codEstacao acaba porque é chave única
+      // Se achou pelo codEstacao (chave única), pode parar a busca
       if (search_for[COD_ESTACAO])
         break;
     }
   }
-  return encontrou;
+
+  // Libera o registro auxiliar utilizado na leitura
+  data_record_destroy(&record);
+
+  return found;
 }
 
+/**
+ * @brief Executa a funcionalidade equivalente a um "SELECT ... WHERE" em SQL.
+ */
 void select_from_where() {
   FILE *f_bin = NULL;
+  DataHeader *header = NULL;
+  DataRecord *filter = NULL;
 
   // Lê o nome do arquivo binário
   char bin_name[50];
   if (scanf("%s", bin_name) != 1) {
-    falha_processamento_arquivo(&f_bin);
+    file_processing_failure_where(&f_bin, &header, &filter);
     return;
   }
 
-  // Abre o arquivo .bin para leitura e verifica se a abertura
-  // foi bem sucedida conferindo o status do arquivo
-  f_bin = open_bin(bin_name, "rb");
+  // Abre o arquivo .bin para leitura e verifica consistência
+  f_bin = open_binary_file(bin_name, "rb");
   if (f_bin == NULL) {
-    falha_processamento_arquivo(&f_bin);
-    return;
+    return; // open_binary_file já lida com a mensagem e o close
   }
 
   // Cria a struct do cabeçalho lendo do arquivo binário
-  CAB cabecalho;
-  ler_cab_bin(f_bin, &cabecalho);
+  header = data_header_create();
+  if (header == NULL || !data_header_read(f_bin, header)) {
+    file_processing_failure_where(&f_bin, &header, &filter);
+    return;
+  }
 
   // Lê o número de consultas a serem feitas
-  int n;
-  if (scanf("%d", &n) != 1) {
-    falha_processamento_arquivo(&f_bin);
+  int num_queries;
+  if (scanf("%d", &num_queries) != 1) {
+    file_processing_failure_where(&f_bin, &header, &filter);
     return;
   }
 
   // Itera sobre as consultas
-  for (int i = 0; i < n; i++) {
-    // Struct registro que serve como comparação para filtrar
-    // os registros do arquivo .bin
-    REG filter;
+  for (int i = 0; i < num_queries; i++) {
+    // Instancia o registro que serve como comparação para filtrar os dados
+    filter = data_record_create();
+    if (filter == NULL) {
+      file_processing_failure_where(&f_bin, &header, &filter);
+      return;
+    }
 
-    // Array auxiliar para informar quais campos devem ser pesquisados e
-    // comparados com o filtro
+    // Array auxiliar para informar quais campos devem ser comparados com o
+    // filtro
     bool search_for[PUBLIC_FIELDS];
 
     // Preenche a struct filter com os valores do filtro de pesquisa
-    // e o array search com os campos a serem comparados
-    filter_build(&filter, search_for);
+    filter_build(filter, search_for);
 
-    bool encontrou = search(f_bin, &cabecalho, search_for, &filter);
+    bool found = search(f_bin, header, search_for, filter);
 
     // Se nenhum registro foi encontrado, o usuário é avisado
-    if (!encontrou) {
+    if (!found) {
       printf("Registro inexistente.\n");
     }
 
     // Separa as consultas por uma linha em branco
     printf("\n");
+
+    // Destrói o filtro após usá-lo na iteração atual para evitar memory leak
+    data_record_destroy(&filter);
   }
 
-  // Fecha o arquivo .bin
+  // Libera a memória final
   fclose(f_bin);
-  f_bin = NULL;
+  data_header_destroy(&header);
 }

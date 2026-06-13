@@ -1,14 +1,23 @@
-#ifndef PAGE_H
-#define PAGE_H
+#ifndef B_TREE_H
+#define B_TREE_H
 
 #include <stdbool.h>
 #include <stdio.h>
+
+#define ERROR -1
+
+#define NOT_IN_PAGE 0
+#define IN_PAGE 1
+
+// ---------- BTREE ---------- //
 
 #define B_TREE_ORDER 4
 #define MAX_KEYS_PER_PAGE_B_TREE 3
 #define MIN_KEYS_PER_PAGE_B_TREE 1
 #define MAX_CHILDREN_B_TREE 4
 #define MIN_CHILDREN_B_TREE 2
+
+// ---------- HEADER ---------- //
 
 #define HEADER_SIZE_B_TREE 17
 
@@ -19,17 +28,21 @@
 #define HEADER_NUM_OF_PAGES_POSITION_B_TREE 13
 
 typedef struct header_B_tree {
-  char status; // 0 = inconsistente
+  char status; // '0' == inconsistente, '1' == consistente
   int rootPage;
   int topOfStack;
   int nextRRN;
   int numOfPages;
 } HEADER_BT;
 
+// ---------- KEY ---------- //
+
 typedef struct key_bt {
   int value;
   int byteOffset;
 } KEY;
+
+// ---------- PAGE ---------- //
 
 #define PAGE_SIZE_B_TREE 53
 
@@ -43,10 +56,14 @@ typedef struct key_bt {
 #define PAGE_KEYS_POSITION_B_TREE 13
 #define PAGE_CHILD_POINTER_POSITION_B_TREE 37
 
+#define PAGE_TYPE_LEAF -1
+#define PAGE_TYPE_ROOT 0
+#define PAGE_TYPE_MID 1
+
 typedef struct page {
-  char removed; // 1 = removed
+  char removed; // '1' == removed
   int nextInStack;
-  int pageType; // -1=folha , 0=raiz , 1=intermediario
+  int pageType; // -1 == folha , 0 == raiz , 1 == intermediário
   int numOfKeys;
 
   KEY keys[MAX_KEYS_PER_PAGE_B_TREE];
@@ -55,15 +72,6 @@ typedef struct page {
 
 } PAGE;
 
-// Funcoes Auxiliares
-/* leitura de página */
-
-/* busca */
-
-#define ERROR -1
-
-#define NOT_IN_PAGE 0
-#define IN_PAGE 1
 // int find_key(FILE *f_arvore_B, PAGE *page, int RRN, int key, int *key_INDEX,
 //              int *page_RRN);
 

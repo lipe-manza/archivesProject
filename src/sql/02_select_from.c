@@ -1,71 +1,103 @@
-#include "../../headers/IO.h"
-#include "../../headers/registro.h"
-#include "../../headers/sql_functions.h"
+#include <stdbool.h>
+#include <stdio.h>
 
-// Função auxiliar para evitar repetição quando há falha no processamento do
-// arquivo
-void falha_processamento_arquivo(FILE **f) {
-  if (f != NULL && *f != NULL) {
-    fclose(*f);
-    *f = NULL;
+#include "../../include/IO.h"
+#include "../../include/data_header.h"
+#include "../../include/data_record.h"
+#include "../../include/sql_functions.h"
+
+/**
+ * @brief Função auxiliar para evitar repetição de código quando há falha no
+ * processamento. Libera a memória alocada e fecha arquivos abertos antes de
+ * exibir a mensagem de erro.
+ */
+void file_processing_failure_select(FILE **f_bin, DataHeader **header,
+                                    DataRecord **record) {
+  if (f_bin != NULL && *f_bin != NULL) {
+    fclose(*f_bin);
+    *f_bin = NULL;
+  }
+  if (header != NULL) {
+    data_header_destroy(header);
+  }
+  if (record != NULL) {
+    data_record_destroy(record);
   }
 
-  printf("Falha no processamento do arquivo.");
+  printf("Falha no processamento do arquivo.\n");
 }
 
+/**
+ * @brief Executa a funcionalidade equivalente a um "SELECT *" em SQL.
+ * Lê todos os registros de um arquivo binário e imprime os que não estão
+ * logicamente removidos.
+ */
 void select_from() {
   FILE *f_bin = NULL;
+  DataHeader *header = NULL;
+  DataRecord *record = NULL;
 
   // Lê o nome do arquivo binário
   char bin_name[50];
   if (scanf("%s", bin_name) != 1) {
-    falha_processamento_arquivo(&f_bin);
+    file_processing_failure_select(&f_bin, &header, &record);
     return;
   }
 
   // Abre o arquivo .bin para leitura e verifica se a abertura
   // foi bem sucedida conferindo o status do arquivo
-  f_bin = open_bin(bin_name, "rb");
-
+  f_bin = open_binary_file(bin_name, "rb");
   if (f_bin == NULL) {
-    falha_processamento_arquivo(&f_bin);
+    // open_binary_file já imprime a mensagem de erro e lida com o close, então
+    // apenas encerramos
     return;
   }
 
-  // Cria a struct do cabeçalho lendo do arquivo binário
-  CAB cabecalho;
-  ler_cab_bin(f_bin, &cabecalho);
+  // Instancia e cria a estrutura do cabeçalho lendo do arquivo binário
+  header = data_header_create();
+  if (header == NULL || !data_header_read(f_bin, header)) {
+    file_processing_failure_select(&f_bin, &header, &record);
+    return;
+  }
 
-  // Struct registro auxiliar para ler o .bin
-  REG registro;
+  // Instancia o registro auxiliar que será usado iterativamente para ler o .bin
+  record = data_record_create();
+  if (record == NULL) {
+    file_processing_failure_select(&f_bin, &header, &record);
+    return;
+  }
 
-  // Flag para indicar se algum registro foi encontrado
-  bool encontrou = false;
+  // Flag para indicar se algum registro foi encontrado e exibido
+  bool found = false;
 
-  // Pular para o primeiro registro
-  fseek(f_bin, TAM_CABECALHO, SEEK_SET);
+  // Pular para o primeiro registro físico (após o cabeçalho)
+  fseek(f_bin, HEADER_SIZE, SEEK_SET);
 
-  // Itera pelos registros do .bin
-  for (int RRN = 0; RRN < cabecalho.proxRRN; RRN++) {
-    // Lê o registro do .bin para a struct registro
-    if (!ler_reg_bin(f_bin, &registro)) {
-      falha_processamento_arquivo(&f_bin);
+  // Itera por todos os registros previstos no arquivo binário
+  int total_records = data_header_get_proxRRN(header);
+  for (int rrn = 0; rrn < total_records; rrn++) {
+
+    // Lê o registro do .bin para a estrutura do TAD
+    if (!data_record_read(f_bin, record)) {
+      file_processing_failure_select(&f_bin, &header, &record);
       return;
-    };
+    }
 
-    // O registro só é impresso se não estiver removido
-    if (registro.removido == '0') {
-      encontrou = true;
-      print_registro_in_terminal(&registro);
+    // O registro só é impresso se não estiver marcado como removido
+    if (data_record_get_removido(record) == '0') {
+      found = true;
+      display_data_record(record);
     }
   }
 
-  // Se nenhum registro foi encontrado, o usuário é avisado
-  if (!encontrou) {
+  // Se nenhum registro for encontrado (arquivo apenas com removidos), o usuário
+  // é avisado
+  if (!found) {
     printf("Registro inexistente.\n");
   }
 
-  // Fecha o arquivo .bin
+  // Fecha o arquivo e libera a memória alocada do heap
   fclose(f_bin);
-  f_bin = NULL;
+  data_header_destroy(&header);
+  data_record_destroy(&record);
 }

@@ -1,107 +1,156 @@
-#include "../../headers/IO.h"
-#include "../../headers/filtro.h"
-#include "../../headers/registro.h"
-#include "../../headers/sql_functions.h"
+#include <stdbool.h>
+#include <stdio.h>
 
-// Função auxiliar para evitar repetição quando há falha no processamento do
-// arquivo
-void falha_processamento_arquivo(FILE **f) {
-  if (f != NULL && *f != NULL) {
-    fclose(*f);
-    *f = NULL;
+#include "../../include/IO.h"
+#include "../../include/data_header.h"
+#include "../../include/data_record.h"
+#include "../../include/filtro.h"
+#include "../../include/sql_functions.h"
+#include "../../include/tools.h"
+
+/**
+ * @brief Função auxiliar para evitar repetição quando há falha no
+ * processamento. Libera toda a memória alocada dinamicamente e fecha arquivos
+ * antes do encerramento.
+ */
+void file_processing_failure_update(FILE **f_bin, DataHeader **header,
+                                    DataRecord **filter, DataRecord **updated) {
+  if (f_bin != NULL && *f_bin != NULL) {
+    fclose(*f_bin);
+    *f_bin = NULL;
+  }
+  if (header != NULL) {
+    data_header_destroy(header);
+  }
+  if (filter != NULL) {
+    data_record_destroy(filter);
+  }
+  if (updated != NULL) {
+    data_record_destroy(updated);
   }
 
-  printf("Falha no processamento do arquivo.");
+  printf("Falha no processamento do arquivo.\n");
 }
 
-void update_loop(FILE *f_bin, CAB cabecalho, bool *search, REG *filter,
-                 bool *update, REG *updated) {
-  if (f_bin == NULL || search == NULL || filter == NULL || update == NULL ||
-      updated == NULL)
+/**
+ * @brief Itera pelos registros do arquivo e atualiza os campos solicitados nos
+ * registros que baterem com o filtro.
+ */
+void update_loop(FILE *f_bin, DataHeader *header, bool *search_for,
+                 DataRecord *filter, bool *update_fields,
+                 DataRecord *updated_data) {
+  if (f_bin == NULL || header == NULL || search_for == NULL || filter == NULL ||
+      update_fields == NULL || updated_data == NULL)
     return;
 
-  // Struct registro auxiliar para ler o binário
-  REG registro;
+  // Instancia um registro auxiliar para iteração
+  DataRecord *record = data_record_create();
+  if (record == NULL)
+    return;
 
-  // Itera pelos registros do .bin
-  for (int RRN = 0; RRN < cabecalho.proxRRN; RRN++) {
-    // Lê o registro do .bin para a struct registro
-    ler_reg_bin(f_bin, &registro);
+  int max_records = data_header_get_proxRRN(header);
 
-    // Se o registro está removido ele é pulado
-    if (registro.removido == '1')
+  // Itera pelos registros do arquivo binário
+  for (int rrn = 0; rrn < max_records; rrn++) {
+    // Posiciona e lê o registro atual
+    fseek(f_bin, HEADER_SIZE + (rrn * RECORD_SIZE), SEEK_SET);
+
+    if (!data_record_read(f_bin, record)) {
+      break;
+    }
+
+    // Se o registro está removido, ele é pulado
+    if (data_record_get_removido(record) == '1')
       continue;
 
-    if (match_filter(&registro, search, filter))
-      atualizar_reg_bin(f_bin, RRN, &registro, update, updated);
+    // Se bater com o filtro, chama a função de atualização física do TAD
+    if (match_filter(record, search_for, filter)) {
+      data_record_update(f_bin, rrn, update_fields, updated_data);
+    }
   }
+
+  data_record_destroy(&record);
 }
 
+/**
+ * @brief Executa a funcionalidade equivalente a um "UPDATE ... SET ... WHERE"
+ * em SQL.
+ */
 void update_set_where() {
   FILE *f_bin = NULL;
+  DataHeader *header = NULL;
+  DataRecord *filter = NULL;
+  DataRecord *updated = NULL;
 
   // Lê o nome do arquivo binário
   char bin_name[50];
   if (scanf("%s", bin_name) != 1) {
-    printf("Falha na leitura do nome do arquivo.\n");
+    file_processing_failure_update(&f_bin, &header, &filter, &updated);
     return;
   }
 
-  // Abre o arquivo .bin para leitura e escrita e verifica se a abertura
-  // foi bem sucedida conferindo o status do arquivo
-  f_bin = open_bin(bin_name, "rb+");
+  // Abre o arquivo binário para leitura e escrita
+  f_bin = open_binary_file(bin_name, "rb+");
   if (f_bin == NULL) {
-    falha_processamento_arquivo(&f_bin);
     return;
   }
 
-  tornar_inconsistente(f_bin);
+  // Marca como inconsistente durante as operações
+  mark_file_inconsistent(f_bin);
 
-  // Cria a struct do cabeçalho lendo do arquivo binário
-  CAB cabecalho;
-  ler_cab_bin(f_bin, &cabecalho);
+  // Cria e lê a struct do cabeçalho
+  header = data_header_create();
+  if (header == NULL || !data_header_read(f_bin, header)) {
+    file_processing_failure_update(&f_bin, &header, &filter, &updated);
+    return;
+  }
 
   // Lê o número de atualizações a serem feitas
-  int n;
-  if (scanf("%d", &n) != 1)
+  int num_updates;
+  if (scanf("%d", &num_updates) != 1) {
+    file_processing_failure_update(&f_bin, &header, &filter, &updated);
     return;
-
-  // Itera sobre as sessões de atualização
-  for (int i = 0; i < n; i++) {
-    // Struct registro que serve como comparação para filtrar
-    // os registros do arquivo .bin
-    REG filter;
-
-    // Array auxiliar para informar quais campos devem ser pesquisados e
-    // comparados com o filtro
-    bool search[PUBLIC_FIELDS];
-
-    // Preenche a struct filter e o array search com os valores do filtro de
-    // pesquisa
-    filter_build(&filter, search);
-
-    // Registro que guarda os valores a serem atualizados
-    REG updated;
-
-    // Array auxiliar para informar quais campos devem ser atualizados
-    bool update[PUBLIC_FIELDS];
-
-    // Preenche a struct updated e o array update com os valores a serem
-    // atualizados
-    filter_build(&updated, update);
   }
 
-  // Atualiza o número de estações e pares de estações no registro de
-  // cabeçalho
-  atualizar_estacoes(f_bin);
+  // Itera sobre as sessões de atualização
+  for (int i = 0; i < num_updates; i++) {
+    // 1. Prepara o filtro (WHERE)
+    filter = data_record_create();
+    if (filter == NULL) {
+      file_processing_failure_update(&f_bin, &header, &filter, &updated);
+      return;
+    }
+    bool search_for[PUBLIC_FIELDS];
+    filter_build(filter, search_for);
 
-  // Atualiza e escreve o cabeçalho
-  cabecalho.status = '1';
-  escrever_cab_bin(f_bin, &cabecalho);
+    // 2. Prepara os novos dados (SET)
+    updated = data_record_create();
+    if (updated == NULL) {
+      file_processing_failure_update(&f_bin, &header, &filter, &updated);
+      return;
+    }
+    bool update_fields[PUBLIC_FIELDS];
+    filter_build(updated, update_fields);
 
-  // Fecha o arquivo .bin
+    // 3. Aplica a atualização
+    update_loop(f_bin, header, search_for, filter, update_fields, updated);
+
+    // Libera a memória para a próxima iteração
+    data_record_destroy(&filter);
+    data_record_destroy(&updated);
+  }
+
+  // Atualiza o número de estações e pares de estações (direto na memória RAM)
+  update_statistics(f_bin, header);
+
+  // Grava o cabeçalho consolidado e marca o arquivo como consistente
+  data_header_set_status(header, '1');
+  data_header_write(f_bin, header);
+
+  // Fecha o arquivo e libera a memória restante
   fclose(f_bin);
-  f_bin = NULL;
+  data_header_destroy(&header);
 
+  // Imprime o hash final conforme correção
   BinarioNaTela(bin_name);
 }

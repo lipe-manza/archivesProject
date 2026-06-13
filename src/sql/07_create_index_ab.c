@@ -73,23 +73,25 @@ void create_index_ab() {
     // O registro só é impresso se não estiver removido
     if (registro.removido == '0') {
 
-      // KEY key = {codEst, REG_BYTE_OFFSET(RNN)};
+      KEY key;
+      key.value = registro.codEstacao;
+      key.byteOffset = REG_BYTE_OFFSET(RRN);
+
+      // CONTINUAR AQUI
       // inserir_bt(f_bt, &cab_bt, key)
     }
   }
 
-  // Escrita do registro de cabeçalho
-
-  // Aponta para o inicio do arquivo binário e escreve o status como
-  // consistente pois o arquivo foi escrito com sucesso
-  fseek(f_arvore_b, 0, SEEK_SET);
-  int status = '1';
-  fwrite(&status, sizeof(char), 1, f_arvore_b);
-
-  // ESCREVER AS COISAS NO CABEÇALHO
+  // Atualiza e escreve o cabeçalho
+  headerBt.status = '1';
+  write_B_tree_header_in_bin(f_arvore_b, &headerBt);
 
   // Fecha os arquivos binários
-  close_files(f_entrada, f_arvore_b);
+  fclose(f_entrada);
+  f_entrada = NULL;
+
+  fclose(f_arvore_b);
+  f_arvore_b = NULL;
 
   BinarioNaTela(nome_arvore_b);
 
