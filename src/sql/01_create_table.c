@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include <string.h>
 
 #include "../../include/IO.h"
@@ -56,8 +57,11 @@ void create_table() {
   // Lê os nomes dos arquivos .csv e .bin da entrada padrão
   char csv_name[50];
   char bin_name[50];
-  if (scanf("%s %s", csv_name, bin_name) != 2)
+  if (scanf("%s %s", csv_name, bin_name) != 2) {
+    file_processing_failure(&f_csv, &f_bin, &hash_est, &hash_par, &header,
+                            &record);
     return;
+  }
 
   // Inicializa as tabelas hash para contar estações e pares de estações únicos
   hash_est = criar_hash_estacao();

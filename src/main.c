@@ -3,7 +3,7 @@
 
 #include <stdio.h>
 
-#include "../headers/sql_functions.h"
+#include "../include/sql_functions.h"
 
 int main() {
   int n = 0;
@@ -31,7 +31,7 @@ int main() {
   case 6: // UPDATE SET WHERE
     update_set_where();
     break;
-  case 7: // CREATE INDEX AB
+  /* case 7: // CREATE INDEX AB
     create_index();
     break;
   case 8: // SELECT FROM WHERE AB
@@ -41,7 +41,7 @@ int main() {
     insert_into_ab();
   case 10: // DELETE FROM WHERE AB
     delete_from_where_ab();
-    break;
+    break; */
   default:
     printf("Operação inválida.\n");
     break;

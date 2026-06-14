@@ -1,6 +1,6 @@
-#include "../../headers/IO.h"
-#include "../../headers/registro.h"
-#include "../../headers/sql_functions.h"
+/* #include "../../include/IO.h"
+#include "../../include/registro.h"
+#include "../../include/sql_functions.h"
 
 // Função auxiliar para fechar os arquivos
 void close_files(FILE *f_entrada, FILE *f_arvore_b) {
@@ -80,4 +80,4 @@ void insert_into() {
   f_arvore_b = NULL;
 
   BinarioNaTela(bin_name);
-}
+} */

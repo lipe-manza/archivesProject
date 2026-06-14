@@ -1,6 +1,6 @@
-#include "../../headers/IO.h"
-#include "../../headers/filtro.h"
-#include "../../headers/sql_functions.h"
+/* #include "../../include/IO.h"
+#include "../../include/filtro.h"
+#include "../../include/sql_functions.h"
 
 // Função auxiliar para fechar os arquivos
 void close_files(FILE *f_entrada, FILE *f_arvore_b) {
@@ -107,4 +107,4 @@ void delete_from_where_ab() {
   // Fecha o arquivo de entrada
   fclose(f_entrada);
   f_entrada = NULL;
-}
+} */
