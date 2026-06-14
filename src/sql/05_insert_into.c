@@ -26,9 +26,9 @@ void file_processing_failure_insert(FILE **f_bin, DataHeader **header,
   printf("Falha no processamento do arquivo.\n");
 }
 
-// Lê um novo registro da entrada padrão e realiza a inserção física no
-// arquivo. Se a pilha dinâmica de removidos estiver vazia, insere no fim
-// (proxRRN). Caso contrário, reaproveita o espaço do registro no topo da pilha.
+// Lê um novo registro da entrada padrão e escreve no arquivo. Se a pilha
+// dinâmica de removidos estiver vazia, insere no fim (proxRRN). Caso contrário,
+// reaproveita o espaço do registro no topo da pilha.
 void insert_record(FILE *f_bin, DataHeader *header, DataRecord *record) {
   if (f_bin == NULL || header == NULL || record == NULL)
     return;
@@ -77,9 +77,8 @@ void insert_record(FILE *f_bin, DataHeader *header, DataRecord *record) {
   }
 }
 
-// Executa a funcionalidade equivalente a um "INSERT INTO" em SQL.
-//  Processa as entradas, realiza inserções (reaproveitando espaços via pilha)
-//  e atualiza o número de estações/pares no final.
+//  Processa as entradas, realiza inserções (reaproveitando espaços via pilha) e
+//  atualiza o número de estações/pares no final.
 void insert_into() {
   FILE *f_bin = NULL;
   DataHeader *header = NULL;

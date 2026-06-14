@@ -51,6 +51,8 @@ void set_filter_field(DataRecord *filter, int field, char *field_val) {
   }
 }
 
+// Constrói um vetor que indica quais campos devem ser conferidos e um registro
+// que contém os valores a serem conferidos
 void filter_build(DataRecord *filter, bool search[]) {
   int num_fields = 0;
   if (scanf(" %d", &num_fields) != 1)
@@ -86,6 +88,7 @@ void filter_build(DataRecord *filter, bool search[]) {
   }
 }
 
+// Verifica se um registro passa por um filtro
 bool match_filter(const DataRecord *reg, bool search[],
                   const DataRecord *filter) {
   for (int i = 0; i < PUBLIC_FIELDS; i++) {
@@ -135,4 +138,14 @@ bool match_filter(const DataRecord *reg, bool search[],
   }
 
   return true;
+}
+
+// Verifica se o campo 'codEstacao' bate com o filtro
+bool match_codEstacao(const DataRecord *reg, bool search[],
+                      const DataRecord *filter) {
+
+  if (search[COD_ESTACAO] &&
+      data_record_get_codEstacao(reg) == data_record_get_codEstacao(filter))
+    return true;
+  return false;
 }

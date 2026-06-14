@@ -60,11 +60,10 @@ bool search(FILE *f_bin, DataHeader *header, bool *search_for,
     if (match_filter(record, search_for, filter)) {
       found = true;
       display_data_record(record);
-
-      // Se achou pelo codEstacao (chave única), pode parar a busca
-      if (search_for[COD_ESTACAO])
-        break;
     }
+    // Se tiver o mesmo 'codEstacao' do filtro, encerra a busca
+    if (match_codEstacao(record, search_for, filter))
+      break;
   }
 
   // Libera o registro auxiliar utilizado na leitura
@@ -73,7 +72,7 @@ bool search(FILE *f_bin, DataHeader *header, bool *search_for,
   return found;
 }
 
-// Executa a funcionalidade equivalente a um "SELECT ... WHERE" em SQL.
+// Imprime apenas os registros não removidos que passam pelo filtro
 void select_from_where() {
   FILE *f_bin = NULL;
   DataHeader *header = NULL;

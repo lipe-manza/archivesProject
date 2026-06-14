@@ -18,6 +18,8 @@ struct data_record_st {
   char nomeLinha[51];
 };
 
+// --- Construtor ---
+
 DataRecord *data_record_create(void) {
   DataRecord *new_record = (DataRecord *)malloc(sizeof(DataRecord));
   if (new_record != NULL) {
@@ -36,6 +38,8 @@ DataRecord *data_record_create(void) {
   }
   return new_record;
 }
+
+// --- Destrutor ---
 
 void data_record_destroy(DataRecord **record) {
   if (record != NULL && *record != NULL) {

@@ -9,6 +9,8 @@ struct data_header_st {
   int nroParesEstacoes;
 };
 
+// --- Construtores ---
+
 DataHeader *data_header_create(void) {
   DataHeader *new_header = (DataHeader *)malloc(sizeof(DataHeader));
   if (new_header != NULL) {
@@ -33,6 +35,8 @@ DataHeader *data_header_build(char status, int topo, int proxRRN,
   }
   return new_header;
 }
+
+// --- Destrutor ---
 
 void data_header_destroy(DataHeader **header) {
   if (header != NULL && *header != NULL) {

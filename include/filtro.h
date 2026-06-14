@@ -26,4 +26,8 @@ void filter_build(DataRecord *filter, bool search[]);
 bool match_filter(const DataRecord *reg, bool search[],
                   const DataRecord *filter);
 
+// Verifica se o campo 'codEstacao' bate com o filtro
+bool match_codEstacao(const DataRecord *reg, bool search[],
+                      const DataRecord *filter);
+
 #endif

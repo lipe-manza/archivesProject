@@ -39,9 +39,9 @@ void file_processing_failure(FILE **f_csv, FILE **f_bin, HashEstacao **hash_est,
   printf("Falha no processamento do arquivo.\n");
 }
 
-// Função principal para converter o arquivo .csv de entrada em um
-// arquivo binário .bin. Lê os dados sequencialmente, popula os registros de
-// dados e indexa as estações e pares únicos.
+// Função principal para converter o arquivo .csv de entrada em um arquivo
+// binário .bin. Lê os dados sequencialmente, popula os registros de dados e
+// indexa as estações e pares únicos.
 void create_table() {
   FILE *f_csv = NULL;
   FILE *f_bin = NULL;

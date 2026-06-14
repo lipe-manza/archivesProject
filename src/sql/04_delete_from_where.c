@@ -70,15 +70,17 @@ void delete_loop(FILE *f_bin, DataHeader *header, bool *search_for,
       fseek(f_bin, HEADER_SIZE + (rrn * RECORD_SIZE), SEEK_SET);
       data_record_write(f_bin, record);
     }
+
+    // Se tiver o mesmo 'codEstacao' do filtro, encerra a busca
+    if (match_codEstacao(record, search_for, filter))
+      break;
   }
 
   // Libera a memória do registro auxiliar
   data_record_destroy(&record);
 }
 
-// Executa a funcionalidade equivalente a um "DELETE FROM ... WHERE" em
-// SQL. Gerencia a abertura em modo rb+, loops de filtragem e atualização da
-// pilha de removidos.
+// Faz a remoção lógica dos registros que batem com o filtro da consulta
 void delete_from_where() {
   FILE *f_bin = NULL;
   DataHeader *header = NULL;
