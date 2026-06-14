@@ -4,7 +4,7 @@
 #include <stdbool.h>
 #include <stdio.h>
 
-// ==================== Constantes e Macros ====================
+// ==================== Constantes ====================
 
 // Ordem e limites da árvore B
 #define BTREE_ORDER 4

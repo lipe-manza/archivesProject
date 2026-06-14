@@ -187,6 +187,8 @@ void ScanQuoteString(char *str) {
   }
 }
 
+// Lê a inserção pedida e grava no new_record utilizando ScanQuoteString e
+// fazendo as devidas alterações para quando for pedido NULO
 void read_data_record_from_stdin(DataRecord *new_record) {
   if (new_record == NULL)
     return;

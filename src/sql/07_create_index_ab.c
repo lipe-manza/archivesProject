@@ -9,7 +9,6 @@
 #define DATA_RECORD_SIZE 80
 
 // Função auxiliar para limpar memória e fechar arquivos em caso de erro,
-// imprimindo a mensagem padronizada exigida pela especificação.
 static void falha_processamento_arquivo(FILE **f1, FILE **f2, DataHeader **dh,
                                         DataRecord **dr, BTreeHeader **bth) {
   if (f1 != NULL && *f1 != NULL) {
@@ -30,7 +29,7 @@ static void falha_processamento_arquivo(FILE **f1, FILE **f2, DataHeader **dh,
   printf("Falha no processamento do arquivo.\n");
 }
 
-// @brief Funcionalidade [7]: Cria um arquivo de índice Árvore-B a partir de
+// Funcionalidade [7]: Cria um arquivo de índice Árvore-B a partir de
 // um arquivo de dados existente.
 void create_index() {
   char nome_entrada[50];
@@ -47,7 +46,7 @@ void create_index() {
   }
 
   // O arquivo de índice precisa ser 'wb+' porque a inserção na Árvore-B
-  // intercala leituras (para buscar a folha) e escritas (para salvar nós)
+  // precisa ler(ver se a key já existe) e escrever(inserir) no disco
   FILE *f_arvore_b = fopen(nome_arvore_b, "wb+");
   if (f_arvore_b == NULL) {
     printf("Failed at line %d\n", __LINE__);
@@ -88,6 +87,7 @@ void create_index() {
   // Itera sobre todos os registros do arquivo de dados
   for (int RRN = 0; RRN < prox_rrn_dados; RRN++) {
 
+    // Tenta ler o registro atual
     if (!data_record_read(f_entrada, registro)) {
       printf("Failed at line %d\n", __LINE__);
       falha_processamento_arquivo(&f_entrada, &f_arvore_b, &cab_entrada,
@@ -95,7 +95,7 @@ void create_index() {
       return;
     }
 
-    // Registros logicamente removidos não devem ser indexados na Árvore-B
+    // Se for lógicamente removido não insere na B-Tree
     if (data_record_get_removido(registro) == '0') {
       BTreeKey key;
       key.C = data_record_get_codEstacao(registro);
@@ -127,6 +127,7 @@ void create_index() {
   data_record_destroy(&registro);
   btree_header_destroy(&headerBt);
 
+  // Fecha os arquivos
   fclose(f_entrada);
   fclose(f_arvore_b);
 

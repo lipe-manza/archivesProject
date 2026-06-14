@@ -88,6 +88,7 @@ void select_from_where_ab() {
 
   // Processa cada uma das N buscas
   for (int i = 0; i < n_queries; i++) {
+    // Inicializa o vetor search_for que possui quais campos serão buscados
     bool search_for[PUBLIC_FIELDS] = {false};
 
     // Constrói o filtro com base na entrada do usuário (Stdin)
@@ -95,9 +96,9 @@ void select_from_where_ab() {
 
     bool encontrou = false;
 
-    // ESTRATÉGIA 1: Busca Indexada via Árvore-B (O(log n))
     // Verifica se o campo indexado (codEstacao mapeado para índice 0 no
     // filtro.h) foi solicitado
+    // Se sim faz busca binária pela B-tree para achar o byteoffset do registro
     if (search_for[COD_ESTACAO]) {
       int search_key = data_record_get_codEstacao(filter);
 
@@ -111,9 +112,9 @@ void select_from_where_ab() {
         if (data_record_read(f_entrada, registro)) {
           // Confirma se o registro não está logicamente removido
           if (data_record_get_removido(registro) == '0') {
-            // Confirma se ele passa nos OUTROS critérios da cláusula WHERE
+            // Confirma se ele bate com os outros campos usando o filter
             if (match_filter(registro, search_for, filter)) {
-              display_data_record(registro); // Função da IO.h
+              display_data_record(registro); // Printa  o registro
               printf("\n");
               encontrou = true;
             }
@@ -121,8 +122,8 @@ void select_from_where_ab() {
         }
       }
     }
-    // ESTRATÉGIA 2: Busca Sequencial (Full Table Scan O(n))
     // Quando a chave primária não foi informada na consulta
+    // Buca sequencialmente pelo registro de dados (data_record)
     else {
       int prox_rrn = data_header_get_proxRRN(cab_dados);
       fseek(f_entrada, DATA_HEADER_SIZE, SEEK_SET);
@@ -145,7 +146,7 @@ void select_from_where_ab() {
       printf("\n");
     }
   }
-
+  // Fecha arquivos e limpa a memória
   cleanup_resources(&f_entrada, &f_arvore_b, &cab_dados, &cab_btree, &filter,
                     &registro);
 }

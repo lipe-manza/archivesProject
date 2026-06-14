@@ -31,8 +31,7 @@ static void cleanup_resources(FILE **f_data, FILE **f_btree, DataHeader **dh,
 }
 
 // Funcionalidade [9]: Insere novos registros no arquivo de dados
-// reaproveitando espaços removidos e indexa a nova inserção na Árvore-B em
-// tempo real.
+// reaproveitando espaços removidos e indexa a nova inserção na Árvore-B
 void insert_into_ab() {
   char input_filename[50];
   char btree_filename[50];
@@ -91,7 +90,7 @@ void insert_into_ab() {
 
   // Processa o lote de inserções
   for (int i = 0; i < num_insertions; i++) {
-    // Função da IO.h que gerencia a formatação NULO e ScanQuoteString
+    // Lê o pedido de inserção atual e grava no new_record
     read_data_record_from_stdin(new_record);
 
     int target_key = data_record_get_codEstacao(new_record);
@@ -119,24 +118,16 @@ void insert_into_ab() {
     } else {
       // Se a pilha estiver vazia, insere no final do arquivo
       target_rrn = next_rrn;
+      // Atualiza o próximo rrn disponível
       data_header_set_proxRRN(data_header, next_rrn + 1);
     }
 
-    // Atualiza as estatísticas do arquivo de dados
-    data_header_set_nroEstacoes(data_header,
-                                data_header_get_nroEstacoes(data_header) + 1);
-    if (data_record_get_codProxEstacao(new_record) != -1) {
-      data_header_set_nroParesEstacoes(
-          data_header, data_header_get_nroParesEstacoes(data_header) + 1);
-    }
-
-    // Escreve fisicamente o registro de dados (Lida com o preenchimento de lixo
-    // '$')
+    // Escreve fisicamente o registro de dados
     long byte_offset = DATA_HEADER_SIZE + (long)(target_rrn * DATA_RECORD_SIZE);
     fseek(f_data, byte_offset, SEEK_SET);
     data_record_write(f_data, new_record);
 
-    // Prepara o DTO da Chave e insere na Árvore-B
+    // Prepara a chave a ser inserida
     BTreeKey key;
     key.C = data_record_get_codEstacao(new_record);
     key.Pr = byte_offset;
