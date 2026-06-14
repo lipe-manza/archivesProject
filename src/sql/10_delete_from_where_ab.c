@@ -4,6 +4,7 @@
 #include "../../include/data_record.h"
 #include "../../include/filtro.h"
 #include "../../include/sql_functions.h"
+#include "../../include/tools.h"
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -46,13 +47,6 @@ static void perform_data_deletion(FILE *f_data, DataHeader *cab_dados,
 
   // 2. Atualiza o topo do cabeçalho
   data_header_set_topo(cab_dados, rrn);
-  data_header_set_nroEstacoes(cab_dados,
-                              data_header_get_nroEstacoes(cab_dados) - 1);
-
-  if (data_record_get_codProxEstacao(registro) != -1) {
-    data_header_set_nroParesEstacoes(
-        cab_dados, data_header_get_nroParesEstacoes(cab_dados) - 1);
-  }
 
   // 3. Persiste a alteração física no disco de dados
   long offset = DATA_HEADER_SIZE + (long)(rrn * DATA_RECORD_SIZE);
@@ -123,6 +117,7 @@ void delete_from_where_ab() {
             // Deleção dupla (Dados + Índice)
             perform_data_deletion(f_data, cab_dados, registro, rrn);
             btree_delete_key(f_btree, cab_btree, target_key);
+            printf("DELETING KEY %d\n", target_key);
           }
         }
       }
@@ -145,6 +140,7 @@ void delete_from_where_ab() {
             // Deleção dupla
             perform_data_deletion(f_data, cab_dados, registro, rrn);
             btree_delete_key(f_btree, cab_btree, key_to_remove);
+            printf("DELETING KEY %d\n", key_to_remove);
           }
         }
       }
@@ -154,6 +150,8 @@ void delete_from_where_ab() {
   // Libera a trava (Consistência reestabelecida)
   data_header_set_status(cab_dados, '1');
   btree_header_set_status(cab_btree, '1');
+
+  update_statistics(f_data, cab_dados);
 
   // Persiste cabeçalhos para o disco
   data_header_write(f_data, cab_dados);

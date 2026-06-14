@@ -5,6 +5,7 @@
 #include "../../include/sql_functions.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include "../../include/tools.h"
 
 #define DATA_HEADER_SIZE 17
 #define DATA_RECORD_SIZE 80
@@ -89,6 +90,7 @@ void insert_into_ab() {
   // (Crash Recovery)
   data_header_set_status(data_header, '0');
   btree_header_set_status(btree_header, '0');
+  update_statistics(f_data, data_header);
   data_header_write(f_data, data_header);
   btree_header_write(f_btree, btree_header);
 
@@ -97,6 +99,10 @@ void insert_into_ab() {
     // Função da IO.h que gerencia a formatação NULO e ScanQuoteString
     read_data_record_from_stdin(new_record);
 
+    int target_key = data_record_get_codEstacao(new_record);
+    if (btree_search_key(f_btree, btree_header, target_key) != BTREE_NOT_FOUND) {
+      continue;
+    }
     int top_stack = data_header_get_topo(data_header);
     int next_rrn = data_header_get_proxRRN(data_header);
     int target_rrn = -1;
@@ -147,6 +153,7 @@ void insert_into_ab() {
   btree_header_set_status(btree_header, '1');
 
   // Persiste as metadados finais (Nro Nos, Nro Chaves, Prox RRN, etc.)
+  update_statistics(f_data, data_header);
   data_header_write(f_data, data_header);
   btree_header_write(f_btree, btree_header);
 

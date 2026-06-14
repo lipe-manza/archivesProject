@@ -45,7 +45,7 @@ void create_index() {
 
   FILE *f_entrada = fopen(nome_entrada, "rb");
   if (f_entrada == NULL) {
-    falha_processamento_arquivo(NULL, NULL, NULL, NULL, NULL);
+    printf("Failed at line %d\n", __LINE__); falha_processamento_arquivo(NULL, NULL, NULL, NULL, NULL);
     return;
   }
 
@@ -53,7 +53,7 @@ void create_index() {
   // intercala leituras (para buscar a folha) e escritas (para salvar nós)
   FILE *f_arvore_b = fopen(nome_arvore_b, "wb+");
   if (f_arvore_b == NULL) {
-    falha_processamento_arquivo(&f_entrada, NULL, NULL, NULL, NULL);
+    printf("Failed at line %d\n", __LINE__); falha_processamento_arquivo(&f_entrada, NULL, NULL, NULL, NULL);
     return;
   }
 
@@ -63,21 +63,21 @@ void create_index() {
   BTreeHeader *headerBt = btree_header_create();
 
   if (cab_entrada == NULL || registro == NULL || headerBt == NULL) {
-    falha_processamento_arquivo(&f_entrada, &f_arvore_b, &cab_entrada,
+    printf("Failed at line %d\n", __LINE__); falha_processamento_arquivo(&f_entrada, &f_arvore_b, &cab_entrada,
                                 &registro, &headerBt);
     return;
   }
 
   // Leitura do cabeçalho do arquivo de dados
   if (!data_header_read(f_entrada, cab_entrada)) {
-    falha_processamento_arquivo(&f_entrada, &f_arvore_b, &cab_entrada,
+    printf("Failed at line %d\n", __LINE__); falha_processamento_arquivo(&f_entrada, &f_arvore_b, &cab_entrada,
                                 &registro, &headerBt);
     return;
   }
 
   // O status padrão do construtor já é '0' (inconsistente)
   if (!btree_header_write(f_arvore_b, headerBt)) {
-    falha_processamento_arquivo(&f_entrada, &f_arvore_b, &cab_entrada,
+    printf("Failed at line %d\n", __LINE__); falha_processamento_arquivo(&f_entrada, &f_arvore_b, &cab_entrada,
                                 &registro, &headerBt);
     return;
   }
@@ -88,7 +88,7 @@ void create_index() {
   for (int RRN = 0; RRN < prox_rrn_dados; RRN++) {
 
     if (!data_record_read(f_entrada, registro)) {
-      falha_processamento_arquivo(&f_entrada, &f_arvore_b, &cab_entrada,
+      printf("Failed at line %d\n", __LINE__); falha_processamento_arquivo(&f_entrada, &f_arvore_b, &cab_entrada,
                                   &registro, &headerBt);
       return;
     }
@@ -103,7 +103,7 @@ void create_index() {
 
       // Insere na Árvore-B
       if (!btree_insert_key(f_arvore_b, headerBt, key)) {
-        falha_processamento_arquivo(&f_entrada, &f_arvore_b, &cab_entrada,
+        printf("Failed at line %d\n", __LINE__); falha_processamento_arquivo(&f_entrada, &f_arvore_b, &cab_entrada,
                                     &registro, &headerBt);
         return;
       }
@@ -113,7 +113,7 @@ void create_index() {
   // Atualiza o status para consistente ('1') e salva o cabeçalho final
   btree_header_set_status(headerBt, '1');
   if (!btree_header_write(f_arvore_b, headerBt)) {
-    falha_processamento_arquivo(&f_entrada, &f_arvore_b, &cab_entrada,
+    printf("Failed at line %d\n", __LINE__); falha_processamento_arquivo(&f_entrada, &f_arvore_b, &cab_entrada,
                                 &registro, &headerBt);
     return;
   }

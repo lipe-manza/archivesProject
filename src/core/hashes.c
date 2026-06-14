@@ -43,12 +43,8 @@ static unsigned int hash_string(const char *str) {
  * @brief Função hash para pares de inteiros.
  */
 static unsigned int hash_int_pair(int c1, int c2) {
-  // Ordena os códigos para que (A,B) e (B,A) gerem o mesmo hash
-  int minn = c1 < c2 ? c1 : c2;
-  int maxx = c1 > c2 ? c1 : c2;
-
   // Combinação usando números primos para reduzir colisões
-  return (unsigned int)((minn * 31) + (maxx * 17)) % TABLE_SIZE;
+  return (unsigned int)((c1 * 31) + (c2 * 17)) % TABLE_SIZE;
 }
 
 HashEstacao *criar_hash_estacao() {
@@ -100,8 +96,7 @@ int inserir_par(HashPar *ht, int c1, int c2) {
 
   // Percorre a lista encadeada para verificar se o par já existe
   while (curr) {
-    if ((curr->codA == c1 && curr->codB == c2) ||
-        (curr->codA == c2 && curr->codB == c1)) {
+    if (curr->codA == c1 && curr->codB == c2) {
       return 0;
     }
     curr = curr->next;

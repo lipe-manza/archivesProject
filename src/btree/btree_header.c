@@ -1,5 +1,6 @@
 #include "../../include/btree.h"
 #include <stdlib.h>
+#include <string.h>
 
 /**
  * @brief Definição real da estrutura do cabeçalho da Árvore-B.

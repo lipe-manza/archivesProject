@@ -1,5 +1,6 @@
 #include "../../include/btree.h"
 #include <stdlib.h>
+#include <string.h>
 
 /**
  * @brief Definição real da estrutura da página da Árvore-B.
@@ -155,6 +156,16 @@ bool btree_page_write(FILE *bin_file, const BTreePage *page, int rrn) {
 
   if (fseek(bin_file, calculate_page_offset(rrn), SEEK_SET) != 0)
     return false;
+
+  if (page->removido == '1') {
+      if (fwrite(&page->removido, sizeof(char), 1, bin_file) != 1) return false;
+      if (fwrite(&page->proximo, sizeof(int), 1, bin_file) != 1) return false;
+      char lixo[48];
+      memset(lixo, '$', 48);
+      if (fwrite(lixo, sizeof(char), 48, bin_file) != 48) return false;
+      fflush(bin_file);
+      return true;
+  }
 
   if (fwrite(&page->removido, sizeof(char), 1, bin_file) != 1)
     return false;

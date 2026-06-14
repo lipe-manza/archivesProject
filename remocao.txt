@@ -1,0 +1,681 @@
+Árvores-B:
+Remoção
+Cristina D. Aguiar
+
+Situações (Casos)
+1. Remoção de uma chave em um nó folha, sem
+causar underflow
+2. Remoção de uma chave em um nó não folha
+3. Remoção de uma chave em um nó, causando
+underflow
+4. Remoção de uma chave em um nó, causando
+underflow e a redistribuição não pode ser aplicada
+5. Underflow no nó pai causado pela remoção de
+uma chave em um nó filho
+6. Diminuição da altura da árvore
+
+Remoção: Caso 1
+• Remoção de uma chave em um nó folha,
+sem causar underflow
+– situação mais simples possível
+
+• Solução
+– eliminar a chave da página
+– rearranjar as chaves remanescentes dentro
+da página para fechar o espaço liberado
+
+Remoção: Caso 1 (1/2)
+• Remoção de J
+
+• árvore-B de ordem 6
+
+0
+
+M
+
+1
+
+2
+
+Q U
+
+D H
+
+3
+
+4
+
+A C
+
+5
+
+E F
+
+6
+
+I J K
+
+Registro de cabeçalho noRaiz: 0
+
+7
+
+N O P
+
+8
+
+R S
+
+V W X Y Z
+
+Remoção: Caso 1 (2/2)
+• Remoção de J
+– página 5 garante a taxa de ocupação
+0
+
+M
+
+1
+
+2
+
+Q U
+
+D H
+
+3
+
+4
+
+A C
+
+5
+
+E F
+
+6
+
+I K
+
+Registro de cabeçalho noRaiz: 0
+
+7
+
+N O P
+
+8
+
+R S
+
+V W X Y Z
+
+Remoção: Caso 2
+• Remoção de uma chave em um nó não
+folha
+• Solução
+– sempre remover chaves somente nas folhas
+
+• Passos
+– trocar a chave a ser removida com a sua
+chave sucessora imediata (que está em um
+nó folha)
+– remover a chave diretamente do nó folha
+
+Remoção: Caso 2 (1/3)
+• Remoção de M
+0
+
+M
+
+1
+
+2
+
+Q U
+
+D H
+
+3
+
+4
+
+A C
+
+5
+
+E F
+
+6
+
+I K
+
+Registro de cabeçalho noRaiz: 0
+
+7
+
+N O P
+
+8
+
+R S
+
+V W X Y Z
+
+Remoção: Caso 2 (2/3)
+• Remoção de M
+– troca-se M com N
+0
+
+N
+
+M
+
+1
+
+2
+
+Q U
+
+D H
+
+3
+
+4
+
+A C
+
+5
+
+E F
+
+6
+
+I K
+
+Registro de cabeçalho noRaiz: 0
+
+N
+
+7
+
+M O P
+
+8
+
+R S
+
+V W X Y Z
+
+Remoção: Caso 2 (3/3)
+• Remoção de M
+– elimina-se M
+– página 6 garante a taxa de ocupação
+0
+
+N
+
+1
+
+2
+
+Q U
+
+D H
+
+3
+
+4
+
+A C
+
+5
+
+E F
+
+6
+
+I K
+
+Registro de cabeçalho noRaiz: 0
+
+7
+
+O P
+
+8
+
+R S
+
+V W X Y Z
+
+Remoção: Caso 3
+• Remoção de uma chave em um nó,
+causando underflow
+• Solução: Redistribuição
+– procurar uma página irmã (i.e., que possui o
+mesmo pai) adjacente que contenha mais
+chaves do que o mínimo
+– se encontrou
+• redistribuir as chaves entre as páginas
+• reacomodar a chave separadora, modificando o
+conteúdo do nó pai
+
+Remoção: Caso 3 (1/3)
+• Remoção de R
+
+0
+
+N
+
+1
+
+2
+
+Q U
+
+D H
+
+3
+
+4
+
+A C
+
+5
+
+E F
+
+6
+
+I K
+
+Registro de cabeçalho noRaiz: 0
+
+8
+
+7
+
+O P
+
+R S
+
+V W X Y Z
+
+Remoção: Caso 3 (2/3)
+• Remoção de R
+– para evitar underflow na página 7, redistribuise as chaves entre as páginas 7 e 8 por meio
+da página 2
+0
+N
+
+1
+
+2
+
+Q W
+
+D H
+
+U
+3
+
+4
+
+A C
+
+5
+
+E F
+
+I K
+
+Registro de cabeçalho noRaiz: 0
+
+8
+
+7
+
+6
+
+O P
+
+R S U V
+
+VW
+X Y Z
+
+Remoção: Caso 3 (3/3)
+• Remoção de R
+– páginas 7 e 8 garantem a taxa de ocupação
+0
+
+N
+
+1
+
+2
+
+Q W
+
+D H
+
+3
+
+4
+
+A C
+
+5
+
+E F
+
+I K
+
+Registro de cabeçalho noRaiz: 0
+
+8
+
+7
+
+6
+
+O P
+
+S U V
+
+X Y Z
+
+Remoção: Caso 4
+• Remoção de uma chave em um nó,
+causando underflow e a redistribuição não
+pode ser aplicada
+• Solução: Concatenação
+– combinar para formar uma nova página
+• o conteúdo do nó que sofreu underflow
+• o conteúdo de um nó irmão adjacente
+• a chave separadora no nó pai
+
+– tratar o underflow no nó pai, caso necessário
+
+Concatenação
+• Processo inverso do split
+• Características
+– reverte a promoção de uma chave
+– pode causar underflow no nó pai
+Þ concatenação pode ser propagada em
+direção ao nó raiz
+ocorre a redução no número total
+de nós da árvore
+
+Remoção: Caso 4 (1/3)
+• Remoção de A
+
+0
+
+N
+
+1
+
+2
+
+Q W
+
+D H
+
+3
+
+4
+
+A C
+
+5
+
+E F
+
+I K
+
+Registro de cabeçalho noRaiz: 0
+
+8
+
+7
+
+6
+
+O P
+
+S U V
+
+X Y Z
+
+Remoção: Caso 4 (2/3)
+• Remoção de A
+– concatena-se as páginas 3 e 4 por meio da
+página 1
+0
+
+N
+
+1
+
+2
+
+Q W
+
+D H
+
+3
+
+4
+
+A C
+
+5
+
+E F
+
+I K
+
+Registro de cabeçalho noRaiz: 0
+
+8
+
+7
+
+6
+
+O P
+
+S U V
+
+X Y Z
+
+Remoção: Caso 4 (3/3)
+• Remoção de A
+– gera-se underflow na página 1, o qual precisa
+ser tratado
+0
+
+N
+
+1
+
+2
+
+Q W
+
+H
+
+3
+
+5
+
+C D E F
+
+I K
+
+Registro de cabeçalho noRaiz: 0
+
+8
+
+7
+
+6
+
+O P
+
+S U V
+
+X Y Z
+
+Remoção: Caso 5
+• Underflow no nó pai causado pela
+remoção de uma chave em um nó filho
+• Solução
+– utilizar redistribuição ou concatenação,
+dependendo da quantidade de chaves que a
+página irmã adjacente contém
+
+Remoção: Caso 5 (1/3)
+• Propagação do underflow
+
+0
+
+N
+
+1
+
+2
+
+Q W
+
+H
+
+3
+
+5
+
+C D E F
+
+I K
+
+Registro de cabeçalho noRaiz: 0
+
+8
+
+7
+
+6
+
+O P
+
+S U V
+
+X Y Z
+
+Remoção: Caso 5 (2/3)
+• Propagação do underflow
+– concatena-se as páginas 1 e 2 por meio da
+página 0
+0
+
+N
+
+1
+
+2
+
+Q W
+
+H
+
+3
+
+5
+
+C D E F
+
+I K
+
+Registro de cabeçalho noRaiz: 0
+
+8
+
+7
+
+6
+
+O P
+
+S U V
+
+X Y Z
+
+Remoção: Caso 5 (3/3)
+• Propagação do underflow
+
+1
+
+H N Q W
+
+3
+
+5
+
+C D E F
+
+I K
+
+Registro de cabeçalho noRaiz: 1
+
+8
+
+7
+
+6
+
+O P
+
+S U V
+
+X Y Z
+
+Remoção: Caso 6
+• Diminuição da altura da árvore
+• Característica
+– o nó raiz possui uma única chave
+– a chave é absorvida pela concatenação de
+seus nós filhos
+
+• Solução
+– eliminar a raiz antiga
+– tornar no nó resultante da concatenação dos
+nós filhos a nova raiz da árvore
+
+Algoritmo
+1. se a chave a ser removida não estiver
+em um nó folha, troque-a com sua
+sucessora imediata, que está em um nó
+folha
+2. remova a chave
+3. após a remoção, se o nó satisfaz o
+número mínimo de chaves, nenhuma
+ação adicional é requerida
+
+Algoritmo
+4. após a remoção, caso ocorra underflow,
+verifique o número de chaves nos nós
+irmãos adjacentes à esquerda e à direita
+a. se algum nó irmão adjacente possui mais do
+que o número mínimo de chaves, aplique a
+redistribuição
+b. se nenhum nó irmão adjacente possui mais
+do que o número mínimo de chaves, aplique
+a concatenação
+
+Algoritmo
+5. se ocorreu concatenação, repita os
+passos 3 a 5 para o nó pai
+6. se a última chave da raiz for removida, a
+altura da árvore é diminuída
+
+
