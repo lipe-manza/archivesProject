@@ -8,11 +8,9 @@
 #include "../../include/sql_functions.h"
 #include "../../include/tools.h"
 
-/**
- * @brief Função auxiliar para evitar repetição quando há falha no processamento
- * do arquivo. Libera memória, fecha o arquivo se estiver aberto e imprime a
- * mensagem de erro.
- */
+// Função auxiliar para evitar repetição quando há falha no processamento
+// do arquivo. Libera memória, fecha o arquivo se estiver aberto e imprime a
+// mensagem de erro.
 void file_processing_failure_delete(FILE **f_bin, DataHeader **header,
                                     DataRecord **filter) {
   if (f_bin != NULL && *f_bin != NULL) {
@@ -29,11 +27,9 @@ void file_processing_failure_delete(FILE **f_bin, DataHeader **header,
   printf("Falha no processamento do arquivo.\n");
 }
 
-/**
- * @brief Itera sobre os registros do arquivo e aplica a remoção lógica naqueles
- * que baterem com o filtro. Atualiza o registro, marca como removido e gerencia
- * a pilha dinâmica no cabeçalho.
- */
+// Itera sobre os registros do arquivo e aplica a remoção lógica naqueles
+// que baterem com o filtro. Atualiza o registro, marca como removido e gerencia
+// a pilha dinâmica no cabeçalho.
 void delete_loop(FILE *f_bin, DataHeader *header, bool *search_for,
                  DataRecord *filter) {
   if (f_bin == NULL || header == NULL || search_for == NULL || filter == NULL)
@@ -80,11 +76,9 @@ void delete_loop(FILE *f_bin, DataHeader *header, bool *search_for,
   data_record_destroy(&record);
 }
 
-/**
- * @brief Executa a funcionalidade equivalente a um "DELETE FROM ... WHERE" em
- * SQL. Gerencia a abertura em modo rb+, loops de filtragem e atualização da
- * pilha de removidos.
- */
+// Executa a funcionalidade equivalente a um "DELETE FROM ... WHERE" em
+// SQL. Gerencia a abertura em modo rb+, loops de filtragem e atualização da
+// pilha de removidos.
 void delete_from_where() {
   FILE *f_bin = NULL;
   DataHeader *header = NULL;

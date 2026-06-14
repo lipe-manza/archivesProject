@@ -9,10 +9,8 @@
 
 #define DATA_HEADER_SIZE 17
 
-/**
- * @brief Função auxiliar para fechar arquivos e limpar a memória de forma
- * segura.
- */
+// Função auxiliar para fechar arquivos e limpar a memória de forma
+// segura.
 static void cleanup_resources(FILE **f_entrada, FILE **f_arvore_b,
                               DataHeader **dh, BTreeHeader **bth,
                               DataRecord **filter, DataRecord **reg) {
@@ -35,10 +33,8 @@ static void cleanup_resources(FILE **f_entrada, FILE **f_arvore_b,
     data_record_destroy(reg);
 }
 
-/**
- * @brief Funcionalidade [8]: Busca registros no arquivo de dados utilizando o
- * índice Árvore-B quando o codEstacao for informado.
- */
+// Funcionalidade [8]: Busca registros no arquivo de dados utilizando o
+// índice Árvore-B quando o codEstacao for informado.
 void select_from_where_ab() {
   char nome_entrada[50];
   char nome_arvore_b[50];

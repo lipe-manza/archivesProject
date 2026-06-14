@@ -2,18 +2,15 @@
 #include <stdlib.h>
 #include <string.h>
 
-/**
- * @brief Definição real da estrutura do cabeçalho da Árvore-B.
- * Restrita a este arquivo (.c) para garantir o encapsulamento.
- * ATENÇÃO: Os atributos seguem ESTRITAMENTE a nomenclatura em português
- * exigida pela especificação acadêmica do SCC0215.
- */
+// Definição real da estrutura do cabeçalho da Árvore-B
+// Fica restrita a este arquivo para manter encapsulamento
+// Os nomes seguem a especificação do trabalho da disciplina
 struct btree_header_st {
   char status; // '0' = inconsistente, '1' = consistente
-  int noRaiz;  // RRN do nó raiz. -1 se vazia.
-  int topo;    // RRN do topo da pilha de removidos. -1 se vazia.
-  int proxRRN; // Próximo RRN disponível para criação de nó.
-  int nroNos;  // Número total de nós (páginas) na árvore.
+  int noRaiz;  // RRN do nó raiz. -1 se vazia
+  int topo;    // RRN do topo da pilha de removidos. -1 se vazia
+  int proxRRN; // Próximo RRN disponível para criação de nó
+  int nroNos;  // Número total de nós (páginas) na árvore
 };
 
 BTreeHeader *btree_header_create(void) {
@@ -22,7 +19,7 @@ BTreeHeader *btree_header_create(void) {
     return NULL; // Falha na alocação
   }
 
-  // Valores padrão de inicialização definidos na especificação
+  // Inicialização padrão conforme especificação
   new_header->status = '0';
   new_header->noRaiz = -1;
   new_header->topo = -1;
@@ -35,11 +32,11 @@ BTreeHeader *btree_header_create(void) {
 void btree_header_destroy(BTreeHeader **header) {
   if (header != NULL && *header != NULL) {
     free(*header);
-    *header = NULL; // Prevenção contra memory leaks e dangling pointers
+    *header = NULL; // Evita ponteiro pendurado
   }
 }
 
-// ==================== Getters & Setters ====================
+// ==================== Getters e Setters ====================
 
 void btree_header_set_status(BTreeHeader *header, char status) {
   if (header != NULL)
@@ -86,20 +83,19 @@ int btree_header_get_node_count(const BTreeHeader *header) {
   return (header != NULL) ? header->nroNos : 0;
 }
 
-// ==================== I/O em Disco ====================
+// ==================== Leitura e Escrita em Disco ====================
 
 bool btree_header_read(FILE *bin_file, BTreeHeader *header) {
   if (bin_file == NULL || header == NULL) {
     return false;
   }
 
-  // Move o ponteiro do arquivo para o início para ler o cabeçalho
+  // Posiciona no início do arquivo para leitura do cabeçalho
   if (fseek(bin_file, 0, SEEK_SET) != 0) {
     return false;
   }
 
-  // Leitura sequencial e estrita para garantir a montagem correta da struct
-  // opaca
+  // Leitura sequencial dos campos do cabeçalho
   if (fread(&header->status, sizeof(char), 1, bin_file) != 1)
     return false;
   if (fread(&header->noRaiz, sizeof(int), 1, bin_file) != 1)
@@ -119,12 +115,12 @@ bool btree_header_write(FILE *bin_file, const BTreeHeader *header) {
     return false;
   }
 
-  // Move o ponteiro do arquivo para o início para escrever o cabeçalho
+  // Posiciona no início do arquivo para escrita do cabeçalho
   if (fseek(bin_file, 0, SEEK_SET) != 0) {
     return false;
   }
 
-  // Escrita sequencial e estrita no disco
+  // Escrita sequencial dos campos do cabeçalho
   if (fwrite(&header->status, sizeof(char), 1, bin_file) != 1)
     return false;
   if (fwrite(&header->noRaiz, sizeof(int), 1, bin_file) != 1)
@@ -136,8 +132,7 @@ bool btree_header_write(FILE *bin_file, const BTreeHeader *header) {
   if (fwrite(&header->nroNos, sizeof(int), 1, bin_file) != 1)
     return false;
 
-  // Força a descarga do buffer para o disco (garantia de persistência do
-  // cabeçalho)
+  // Garante persistência imediata no disco
   fflush(bin_file);
 
   return true;

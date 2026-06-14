@@ -8,30 +8,25 @@
 
 // ==================== Funções Auxiliares de Remoção ====================
 
-/**
- * Empilha uma página que foi esvaziada (destruída) na concatenação,
- * reaproveitando o espaço no disco. (Caso 4)
- */
+// Empilha uma página removida na lista de reutilização do arquivo
+// Marca como removida e atualiza o topo da pilha
 static void push_removed_page(FILE *bin_file, BTreeHeader *header, int rrn,
                               BTreePage *page) {
   btree_page_set_removed(page, '1'); // Marca como removido
   btree_page_set_num_of_keys(page, 0);
 
-  // O próximo do nó removido aponta para o antigo topo da pilha
+  // Encadeia na pilha de removidos
   btree_page_set_next_in_stack(page, btree_header_get_top_of_stack(header));
 
-  // O topo do cabeçalho passa a ser este nó recém-removido
+  // Atualiza topo da pilha
   btree_header_set_top_of_stack(header, rrn);
 
-  // Atualiza metadados
+  // Atualiza contagem de nós
   btree_header_set_node_count(header, btree_header_get_node_count(header) - 1);
   btree_page_write(bin_file, page, rrn);
 }
 
-/**
- * Remove uma chave (e seu ponteiro da direita) de uma página dando "shift" para
- * a esquerda.
- */
+// Remove uma chave da página fazendo shift para a esquerda
 static void remove_key_from_page(BTreePage *page, int pos) {
   int num_keys = btree_page_get_num_of_keys(page);
   for (int i = pos; i < num_keys - 1; i++) {
@@ -39,16 +34,14 @@ static void remove_key_from_page(BTreePage *page, int pos) {
     btree_page_set_child_pointer(page, i + 1,
                                  btree_page_get_child_pointer(page, i + 2));
   }
-  // Limpa a última posição que ficou duplicada pelo shift
+
+  // Limpa última posição após shift
   btree_page_set_key(page, num_keys - 1, (BTreeKey){-1, -1});
   btree_page_set_child_pointer(page, num_keys, -1);
   btree_page_set_num_of_keys(page, num_keys - 1);
 }
 
-/**
- * Encontra a chave sucessora imediata (indo uma vez para a direita e tudo para
- * a esquerda). (Caso 2)
- */
+// Encontra o sucessor in-order (menor chave da subárvore direita)
 static void find_successor(FILE *bin_file, int child_rrn,
                            BTreeKey *successor_key) {
   BTreePage *page = btree_page_create();
@@ -56,29 +49,32 @@ static void find_successor(FILE *bin_file, int child_rrn,
 
   while (current_rrn != -1) {
     btree_page_read(bin_file, page, current_rrn);
-    // Se chegou numa folha, o sucessor é o primeiro elemento (índice 0)
+
+    // Se for folha, o sucessor está na primeira posição
     if (btree_page_get_page_type(page) == PAGE_TYPE_LEAF) {
       *successor_key = btree_page_get_key(page, 0);
       break;
     }
-    // Desce pelo ponteiro mais à esquerda
+
+    // Desce sempre pelo filho mais à esquerda
     current_rrn = btree_page_get_child_pointer(page, 0);
   }
+
   btree_page_destroy(&page);
 }
 
 // ==================== Tratamento de Underflow ====================
 
-/**
- * Lida com o Underflow (página com 0 chaves) tentanto Redistribuição e depois
- * Concatenação.
- */
+// Resolve underflow tentando redistribuir ou fazer merge com irmãos
 static int handle_underflow(FILE *bin_file, BTreeHeader *header,
                             BTreePage *parent, int child_idx) {
+
   int child_rrn = btree_page_get_child_pointer(parent, child_idx);
+
   int left_sibling_rrn =
       (child_idx > 0) ? btree_page_get_child_pointer(parent, child_idx - 1)
                       : -1;
+
   int right_sibling_rrn =
       (child_idx < btree_page_get_num_of_keys(parent))
           ? btree_page_get_child_pointer(parent, child_idx + 1)
@@ -86,136 +82,169 @@ static int handle_underflow(FILE *bin_file, BTreeHeader *header,
 
   BTreePage *child = btree_page_create();
   BTreePage *sibling = btree_page_create();
+
   btree_page_read(bin_file, child, child_rrn);
 
-  // 1. Tenta Redistribuição com a Irmã da Direita
+  int child_keys = btree_page_get_num_of_keys(child);
+
+  // ==================== Caso 1: Redistribuição com irmão da direita
+  // ====================
   if (right_sibling_rrn != -1) {
     btree_page_read(bin_file, sibling, right_sibling_rrn);
     int sib_keys = btree_page_get_num_of_keys(sibling);
-    if (sib_keys > 1) { // Tem chave sobrando
-      // Bug 1 Fix: Apenas transfere 1 chave. Remove o bloco de keys_to_take == 2.
-      // Desce a chave do pai para o início do filho
-      btree_page_set_key(child, 0, btree_page_get_key(parent, child_idx));
-      btree_page_set_child_pointer(child, 1, btree_page_get_child_pointer(sibling, 0));
-      btree_page_set_num_of_keys(child, 1);
 
-      // Sobe a primeira chave da direita (promovida) para o pai
+    // Irmão pode emprestar chave
+    if (sib_keys > BTREE_MIN_KEYS) {
+
+      // Desce chave do pai para o filho
+      btree_page_set_key(child, child_keys,
+                         btree_page_get_key(parent, child_idx));
+
+      // Ajusta ponteiros
+      btree_page_set_child_pointer(child, child_keys + 1,
+                                   btree_page_get_child_pointer(sibling, 0));
+
+      btree_page_set_num_of_keys(child, child_keys + 1);
+
+      // Sobe menor chave do irmão direito
       btree_page_set_key(parent, child_idx, btree_page_get_key(sibling, 0));
-      
-      // FIX CICLO INFINITO: remove_key_from_page não arrasta o P0.
-      // Precisamos arrastar P[1] para P[0] manualmente antes de chamar a função.
-      btree_page_set_child_pointer(sibling, 0, btree_page_get_child_pointer(sibling, 1));
-      
-      // Shift na irmã da direita para remover a chave que subiu
+
+      // Ajusta irmão após remoção
+      btree_page_set_child_pointer(sibling, 0,
+                                   btree_page_get_child_pointer(sibling, 1));
+
       remove_key_from_page(sibling, 0);
 
       btree_page_write(bin_file, child, child_rrn);
       btree_page_write(bin_file, sibling, right_sibling_rrn);
+
       btree_page_destroy(&child);
       btree_page_destroy(&sibling);
+
       return DELETE_OK;
     }
   }
 
-  // 2. Tenta Redistribuição com a Irmã da Esquerda
+  // ==================== Caso 2: Redistribuição com irmão da esquerda
+  // ====================
   if (left_sibling_rrn != -1) {
     btree_page_read(bin_file, sibling, left_sibling_rrn);
     int sib_keys = btree_page_get_num_of_keys(sibling);
-    if (sib_keys > 1) {
-      // Desce a chave do pai para o início do filho (que está vazio)
-      btree_page_set_key(child, 0, btree_page_get_key(parent, child_idx - 1));
-      
-      // BUG 2 Reverted: A teoria do usuário estava errada. child->P0 ESTÁ definido (é a única subárvore do filho após underflow).
-      // Então child->P0 vai para child->P1, e sibling->P[sib_keys] assume o child->P0.
-      btree_page_set_child_pointer(child, 1, btree_page_get_child_pointer(child, 0));
-      btree_page_set_child_pointer(child, 0, btree_page_get_child_pointer(sibling, sib_keys));
-      btree_page_set_num_of_keys(child, 1);
 
-      // Sobe a última chave da esquerda para o pai
+    if (sib_keys > BTREE_MIN_KEYS) {
+
+      // Abre espaço no filho (shift para direita)
+      for (int i = child_keys; i > 0; i--) {
+        btree_page_set_key(child, i, btree_page_get_key(child, i - 1));
+        btree_page_set_child_pointer(child, i + 1,
+                                     btree_page_get_child_pointer(child, i));
+      }
+
+      btree_page_set_child_pointer(child, 1,
+                                   btree_page_get_child_pointer(child, 0));
+
+      // Desce chave do pai
+      btree_page_set_key(child, 0, btree_page_get_key(parent, child_idx - 1));
+
+      // Último ponteiro da esquerda vira filho
+      btree_page_set_child_pointer(
+          child, 0, btree_page_get_child_pointer(sibling, sib_keys));
+
+      btree_page_set_num_of_keys(child, child_keys + 1);
+
+      // Sobe maior chave do irmão esquerdo
       btree_page_set_key(parent, child_idx - 1,
                          btree_page_get_key(sibling, sib_keys - 1));
 
-      // Remove a chave doente da esquerda
+      // Limpa irmão
       btree_page_set_key(sibling, sib_keys - 1, (BTreeKey){-1, -1});
       btree_page_set_child_pointer(sibling, sib_keys, -1);
       btree_page_set_num_of_keys(sibling, sib_keys - 1);
 
       btree_page_write(bin_file, child, child_rrn);
       btree_page_write(bin_file, sibling, left_sibling_rrn);
+
       btree_page_destroy(&child);
       btree_page_destroy(&sibling);
+
       return DELETE_OK;
     }
   }
 
-  // 3. Concatenação (Merge) - Tenta primeiro com a Esquerda
+  // ==================== Caso 3: Merge com irmão da esquerda
+  // ====================
   if (left_sibling_rrn != -1) {
     btree_page_read(bin_file, sibling, left_sibling_rrn);
     int sib_keys = btree_page_get_num_of_keys(sibling);
 
-    // Desce a chave do pai para a irmã da esquerda
+    // Desce chave do pai
     btree_page_set_key(sibling, sib_keys,
                        btree_page_get_key(parent, child_idx - 1));
 
-    // Copia os ponteiros do filho (que está vazio, então copia o P0) para a
-    // esquerda
     btree_page_set_child_pointer(sibling, sib_keys + 1,
                                  btree_page_get_child_pointer(child, 0));
-    btree_page_set_num_of_keys(sibling, sib_keys + 1);
 
-    // Remove a chave do pai
+    // Copia tudo do filho
+    for (int i = 0; i < child_keys; i++) {
+      btree_page_set_key(sibling, sib_keys + 1 + i,
+                         btree_page_get_key(child, i));
+      btree_page_set_child_pointer(sibling, sib_keys + 2 + i,
+                                   btree_page_get_child_pointer(child, i + 1));
+    }
+
+    btree_page_set_num_of_keys(sibling, sib_keys + 1 + child_keys);
+
     remove_key_from_page(parent, child_idx - 1);
 
-    // Destrói o nó filho (da direita) e salva as alterações
     push_removed_page(bin_file, header, child_rrn, child);
     btree_page_write(bin_file, sibling, left_sibling_rrn);
 
     btree_page_destroy(&child);
     btree_page_destroy(&sibling);
-    // Checa se o pai agora ficou em underflow (Caso 5)
-    return (btree_page_get_num_of_keys(parent) < 1) ? DELETE_UNDERFLOW
-                                                    : DELETE_OK;
+
+    return (btree_page_get_num_of_keys(parent) < BTREE_MIN_KEYS)
+               ? DELETE_UNDERFLOW
+               : DELETE_OK;
   }
 
-  // 4. Concatenação (Merge) - Por fim, com a Direita
+  // ==================== Caso 4: Merge com irmão da direita
+  // ====================
   if (right_sibling_rrn != -1) {
     btree_page_read(bin_file, sibling, right_sibling_rrn);
-
-    // Desce a chave do pai para o filho (que agora é a página da esquerda no
-    // merge)
-    btree_page_set_key(child, 0, btree_page_get_key(parent, child_idx));
-    btree_page_set_num_of_keys(child, 1);
-
-    // Transfere tudo da irmã da direita para o filho
     int sib_keys = btree_page_get_num_of_keys(sibling);
-    
-    // BUG 3 Fix: Copiar explicitamente sibling->P0 para a posição correta no filho
-    btree_page_set_child_pointer(child, 1, btree_page_get_child_pointer(sibling, 0));
-    
-    for (int i = 0; i < sib_keys; i++) {
-      btree_page_set_key(child, i + 1, btree_page_get_key(sibling, i));
-      btree_page_set_child_pointer(child, i + 2,
-                                   btree_page_get_child_pointer(sibling, i + 1));
-    }
-    btree_page_set_num_of_keys(child, sib_keys + 1);
 
-    // PREVINE O BUG DE PONTEIRO: O remove_key_from_page shiftará P[child_idx+1] -> P[child_idx].
-    // Mas não precisamos fazer isso manualmente se o código original usava "remove_key_from_page(parent, child_idx);" 
-    // Wait, eu devo deixar isso como estava antes do meu patch anterior porque fiz git checkout!
-    // Na verdade, no original:
-    // Remove a chave separadora do pai
-    // remove_key_from_page(parent, child_idx);
-    btree_page_set_child_pointer(parent, child_idx + 1, child_rrn); // FIX MANTIDO do bug do ponteiro que eu achei antes!
+    // Desce chave do pai
+    btree_page_set_key(child, child_keys,
+                       btree_page_get_key(parent, child_idx));
+
+    btree_page_set_child_pointer(child, child_keys + 1,
+                                 btree_page_get_child_pointer(sibling, 0));
+
+    // Copia tudo da direita
+    for (int i = 0; i < sib_keys; i++) {
+      btree_page_set_key(child, child_keys + 1 + i,
+                         btree_page_get_key(sibling, i));
+
+      btree_page_set_child_pointer(
+          child, child_keys + 2 + i,
+          btree_page_get_child_pointer(sibling, i + 1));
+    }
+
+    btree_page_set_num_of_keys(child, child_keys + 1 + sib_keys);
+
+    btree_page_set_child_pointer(parent, child_idx + 1, child_rrn);
+
     remove_key_from_page(parent, child_idx);
 
-    // Destrói a irmã da direita e salva o filho (esquerda do merge)
     push_removed_page(bin_file, header, right_sibling_rrn, sibling);
     btree_page_write(bin_file, child, child_rrn);
 
     btree_page_destroy(&child);
     btree_page_destroy(&sibling);
-    return (btree_page_get_num_of_keys(parent) < 1) ? DELETE_UNDERFLOW
-                                                    : DELETE_OK;
+
+    return (btree_page_get_num_of_keys(parent) < BTREE_MIN_KEYS)
+               ? DELETE_UNDERFLOW
+               : DELETE_OK;
   }
 
   btree_page_destroy(&child);
@@ -225,8 +254,10 @@ static int handle_underflow(FILE *bin_file, BTreeHeader *header,
 
 // ==================== Lógica Recursiva Principal ====================
 
+// Função recursiva que desce a árvore procurando a chave e aplicando remoções
 static int delete_recursive(FILE *bin_file, BTreeHeader *header,
                             int current_rrn, int search_key) {
+
   if (current_rrn == -1)
     return DELETE_NOT_FOUND;
 
@@ -237,9 +268,10 @@ static int delete_recursive(FILE *bin_file, BTreeHeader *header,
   int num_keys = btree_page_get_num_of_keys(page);
   bool found = false;
 
-  // Procura a chave na página atual
+  // Procura chave na página atual
   while (pos < num_keys) {
     BTreeKey current = btree_page_get_key(page, pos);
+
     if (current.C == search_key) {
       found = true;
       break;
@@ -252,36 +284,43 @@ static int delete_recursive(FILE *bin_file, BTreeHeader *header,
   int status;
 
   if (found) {
+
     if (btree_page_get_page_type(page) == PAGE_TYPE_LEAF) {
-      // Caso 1: Chave na folha, apenas arranca
+      // Caso 1: remoção direta na folha
       remove_key_from_page(page, pos);
       btree_page_write(bin_file, page, current_rrn);
-      int ret = (btree_page_get_num_of_keys(page) < 1) ? DELETE_UNDERFLOW : DELETE_OK;
+
+      int ret = (btree_page_get_num_of_keys(page) < BTREE_MIN_KEYS)
+                    ? DELETE_UNDERFLOW
+                    : DELETE_OK;
+
       btree_page_destroy(&page);
       return ret;
+
     } else {
-      // Caso 2: Chave em nó interno, busca o sucessor folha, sobrepõe, e manda
-      // deletar o sucessor lá embaixo
+      // Caso 2: nó interno, troca pelo sucessor
       BTreeKey successor;
+
       find_successor(bin_file, btree_page_get_child_pointer(page, pos + 1),
                      &successor);
-      btree_page_set_key(page, pos, successor);      // Sobrepõe
-      btree_page_write(bin_file, page, current_rrn); // Atualiza página
 
-      // Continua a deleção recursiva procurando pelo sucessor agora
+      btree_page_set_key(page, pos, successor);
+      btree_page_write(bin_file, page, current_rrn);
+
       status = delete_recursive(bin_file, header,
                                 btree_page_get_child_pointer(page, pos + 1),
                                 successor.C);
-      // Temos que verificar se ocorreu underflow no filho pos+1
-      pos = pos + 1; // Para tratar no block final
+
+      pos = pos + 1;
     }
+
   } else {
-    // Não achou aqui, desce para o filho correspondente
+    // Desce para o filho correto
     status = delete_recursive(
         bin_file, header, btree_page_get_child_pointer(page, pos), search_key);
   }
 
-  // Processa Underflow (Casos 3, 4 e 5) que retornou do nível de baixo
+  // Trata underflow vindo do nível inferior
   if (status == DELETE_UNDERFLOW) {
     status = handle_underflow(bin_file, header, page, pos);
     btree_page_write(bin_file, page, current_rrn);
@@ -291,58 +330,54 @@ static int delete_recursive(FILE *bin_file, BTreeHeader *header,
   return status;
 }
 
-// ==================== Função Externa Pública ====================
+// ==================== Função Pública ====================
 
+// Remove uma chave da árvore B
 bool btree_delete_key(FILE *bin_file, BTreeHeader *header, int search_key) {
   if (bin_file == NULL || header == NULL)
     return false;
 
   int root_rrn = btree_header_get_root_node(header);
+
   if (root_rrn == -1)
-    return false; // Árvore vazia
+    return false;
 
   int status = delete_recursive(bin_file, header, root_rrn, search_key);
 
   if (status == DELETE_NOT_FOUND)
     return false;
 
-  // Caso 6: Diminuição da altura da árvore
-  // Se a deleção na raiz resultou em underflow (0 chaves)
+  // Caso especial: raiz pode encolher
   BTreePage *root_page = btree_page_create();
   btree_page_read(bin_file, root_page, root_rrn);
 
   if (btree_page_get_num_of_keys(root_page) == 0) {
+
     int new_root_rrn = btree_page_get_child_pointer(root_page, 0);
 
-    // Se tiver filho, o filho vira a raiz. Se não tiver, a árvore esvaziou de
-    // vez.
     btree_header_set_root_node(header, new_root_rrn);
 
     if (new_root_rrn != -1) {
-      // Atualiza status do novo nó raiz para PAGE_TYPE_ROOT
       BTreePage *new_root = btree_page_create();
       btree_page_read(bin_file, new_root, new_root_rrn);
-      if (btree_page_get_page_type(new_root) != PAGE_TYPE_LEAF) {
-        // BUG 4 FIX:
-      // se o novo nó raiz tem filhos -> ROOT
-      // se não tem -> LEAF
+
       if (btree_page_get_child_pointer(new_root, 0) != -1) {
-          btree_page_set_page_type(new_root, PAGE_TYPE_ROOT);
+        btree_page_set_page_type(new_root, PAGE_TYPE_ROOT);
       } else {
-          btree_page_set_page_type(new_root, PAGE_TYPE_LEAF);
+        btree_page_set_page_type(new_root, PAGE_TYPE_LEAF);
       }
-      }
+
       btree_page_write(bin_file, new_root, new_root_rrn);
       btree_page_destroy(&new_root);
     }
 
-    // Remove a antiga raiz fisicamente e põe na pilha de lixo
     push_removed_page(bin_file, header, root_rrn, root_page);
   }
 
   btree_page_destroy(&root_page);
-  btree_header_write(bin_file,
-                     header); // Salva as mudanças cruciais de topo/raiz
+
+  // Salva mudanças do cabeçalho
+  btree_header_write(bin_file, header);
 
   return true;
 }

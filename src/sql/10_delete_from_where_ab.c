@@ -11,9 +11,7 @@
 #define DATA_HEADER_SIZE 17
 #define DATA_RECORD_SIZE 80
 
-/**
- * @brief Libera os TADs e fecha os arquivos de forma segura.
- */
+// Libera os TADs e fecha os arquivos de forma segura.
 static void cleanup_resources(FILE **f_data, FILE **f_btree, DataHeader **dh,
                               BTreeHeader **bth, DataRecord **filter,
                               DataRecord **reg) {
@@ -35,10 +33,8 @@ static void cleanup_resources(FILE **f_data, FILE **f_btree, DataHeader **dh,
     data_record_destroy(reg);
 }
 
-/**
- * @brief Executa a remoção física de um registro de dados, atualizando a pilha
- * de removidos no cabeçalho do arquivo de dados.
- */
+// Executa a remoção física de um registro de dados, atualizando a pilha
+// de removidos no cabeçalho do arquivo de dados.
 static void perform_data_deletion(FILE *f_data, DataHeader *cab_dados,
                                   DataRecord *registro, int rrn) {
   // 1. Marca como removido e aponta para o antigo topo
@@ -54,11 +50,9 @@ static void perform_data_deletion(FILE *f_data, DataHeader *cab_dados,
   data_record_write(f_data, registro);
 }
 
-/**
- * @brief Funcionalidade [10]: Remove registros baseados em um filtro.
- * Orquestra a deleção encadeada no arquivo de dados e o rebalanceamento no
- * índice.
- */
+// Funcionalidade [10]: Remove registros baseados em um filtro.
+// Orquestra a deleção encadeada no arquivo de dados e o rebalanceamento no
+// índice.
 void delete_from_where_ab() {
   char input_filename[50];
   char btree_filename[50];
@@ -117,7 +111,6 @@ void delete_from_where_ab() {
             // Deleção dupla (Dados + Índice)
             perform_data_deletion(f_data, cab_dados, registro, rrn);
             btree_delete_key(f_btree, cab_btree, target_key);
-            printf("DELETING KEY %d\n", target_key);
           }
         }
       }
@@ -140,7 +133,6 @@ void delete_from_where_ab() {
             // Deleção dupla
             perform_data_deletion(f_data, cab_dados, registro, rrn);
             btree_delete_key(f_btree, cab_btree, key_to_remove);
-            printf("DELETING KEY %d\n", key_to_remove);
           }
         }
       }

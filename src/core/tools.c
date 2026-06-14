@@ -6,11 +6,9 @@
 #include "../../include/data_record.h"
 #include "../../include/hash_tables.h"
 
-/**
- * @brief Recalcula o número de estações únicas e pares de estações varrendo
- * todo o arquivo binário. Atualiza os valores diretamente no objeto DataHeader
- * fornecido em memória.
- */
+// Recalcula o número de estações únicas e pares de estações varrendo
+// todo o arquivo binário. Atualiza os valores diretamente no objeto DataHeader
+// fornecido em memória.
 bool update_statistics(FILE *f_bin, DataHeader *header) {
   if (f_bin == NULL || header == NULL)
     return false;

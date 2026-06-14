@@ -3,17 +3,14 @@
 #include "../../include/data_header.h"
 #include "../../include/data_record.h"
 #include "../../include/sql_functions.h"
+#include "../../include/tools.h"
 #include <stdio.h>
 #include <stdlib.h>
-#include "../../include/tools.h"
 
 #define DATA_HEADER_SIZE 17
 #define DATA_RECORD_SIZE 80
 
-/**
- * @brief Função auxiliar para fechar arquivos e evitar vazamentos de memória
- * (Memory Leaks).
- */
+// Função auxiliar para fechar arquivos e evitar vazamentos de memória
 static void cleanup_resources(FILE **f_data, FILE **f_btree, DataHeader **dh,
                               BTreeHeader **bth, DataRecord **reg) {
   if (f_data && *f_data) {
@@ -33,11 +30,9 @@ static void cleanup_resources(FILE **f_data, FILE **f_btree, DataHeader **dh,
     data_record_destroy(reg);
 }
 
-/**
- * @brief Funcionalidade [9]: Insere novos registros no arquivo de dados
- * reaproveitando espaços removidos e indexa a nova inserção na Árvore-B em
- * tempo real.
- */
+// Funcionalidade [9]: Insere novos registros no arquivo de dados
+// reaproveitando espaços removidos e indexa a nova inserção na Árvore-B em
+// tempo real.
 void insert_into_ab() {
   char input_filename[50];
   char btree_filename[50];
@@ -100,7 +95,8 @@ void insert_into_ab() {
     read_data_record_from_stdin(new_record);
 
     int target_key = data_record_get_codEstacao(new_record);
-    if (btree_search_key(f_btree, btree_header, target_key) != BTREE_NOT_FOUND) {
+    if (btree_search_key(f_btree, btree_header, target_key) !=
+        BTREE_NOT_FOUND) {
       continue;
     }
     int top_stack = data_header_get_topo(data_header);
@@ -114,7 +110,7 @@ void insert_into_ab() {
       // Lê diretamente o campo 'proximo' do registro removido (byte offset 1-4)
       long offset = DATA_HEADER_SIZE + (long)(target_rrn * DATA_RECORD_SIZE);
       fseek(f_data, offset + 1, SEEK_SET); // Pula o byte 'removido'
-      
+
       int next_in_stack = -1;
       fread(&next_in_stack, sizeof(int), 1, f_data);
 

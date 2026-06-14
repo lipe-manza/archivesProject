@@ -18,16 +18,11 @@
 
 int field_to_index(char *str);
 
-/**
- * @brief Lê a entrada padrão e preenche o registro de filtro e o array de
- * busca.
- */
+//  Lê a entrada padrão e preenche o registro de filtro e o array de
+// busca.
 void filter_build(DataRecord *filter, bool search[]);
 
-/**
- * @brief Compara um registro com o filtro de pesquisa.
- * @return true se o registro corresponde ao filtro, false caso contrário.
- */
+// Compara um registro com o filtro de pesquisa.
 bool match_filter(const DataRecord *reg, bool search[],
                   const DataRecord *filter);
 

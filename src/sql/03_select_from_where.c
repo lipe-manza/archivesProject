@@ -7,11 +7,9 @@
 #include "../../include/filtro.h"
 #include "../../include/sql_functions.h"
 
-/**
- * @brief Função auxiliar para evitar repetição quando há falha no
- * processamento. Libera a memória de arquivos, cabeçalhos e registros de filtro
- * alocados.
- */
+// Função auxiliar para evitar repetição quando há falha no
+// processamento. Libera a memória de arquivos, cabeçalhos e registros de filtro
+// alocados.
 void file_processing_failure_where(FILE **f_bin, DataHeader **header,
                                    DataRecord **filter) {
   if (f_bin != NULL && *f_bin != NULL) {
@@ -28,15 +26,8 @@ void file_processing_failure_where(FILE **f_bin, DataHeader **header,
   printf("Falha no processamento do arquivo.\n");
 }
 
-/**
- * @brief Itera pelos registros do arquivo binário e imprime aqueles que passam
- * pelo filtro.
- * @param f_bin Arquivo binário aberto para leitura.
- * @param header Cabeçalho do arquivo de dados.
- * @param search_for Array indicando quais campos devem ser comparados.
- * @param filter Registro contendo os dados do filtro.
- * @return true se encontrou pelo menos um registro, false caso contrário.
- */
+// Itera pelos registros do arquivo binário e imprime aqueles que passam
+// pelo filtro.
 bool search(FILE *f_bin, DataHeader *header, bool *search_for,
             DataRecord *filter) {
   if (f_bin == NULL || header == NULL || search_for == NULL || filter == NULL)
@@ -82,9 +73,7 @@ bool search(FILE *f_bin, DataHeader *header, bool *search_for,
   return found;
 }
 
-/**
- * @brief Executa a funcionalidade equivalente a um "SELECT ... WHERE" em SQL.
- */
+// Executa a funcionalidade equivalente a um "SELECT ... WHERE" em SQL.
 void select_from_where() {
   FILE *f_bin = NULL;
   DataHeader *header = NULL;

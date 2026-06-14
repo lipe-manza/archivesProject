@@ -8,11 +8,9 @@
 #include "../../include/sql_functions.h"
 #include "../../include/tools.h"
 
-/**
- * @brief Função auxiliar para evitar repetição quando há falha no
- * processamento. Libera toda a memória alocada dinamicamente e fecha arquivos
- * antes do encerramento.
- */
+// Função auxiliar para evitar repetição quando há falha nos
+// processamento. Libera toda a memória alocada dinamicamente e fecha arquivos
+// antes do encerramento.
 void file_processing_failure_update(FILE **f_bin, DataHeader **header,
                                     DataRecord **filter, DataRecord **updated) {
   if (f_bin != NULL && *f_bin != NULL) {
@@ -32,10 +30,8 @@ void file_processing_failure_update(FILE **f_bin, DataHeader **header,
   printf("Falha no processamento do arquivo.\n");
 }
 
-/**
- * @brief Itera pelos registros do arquivo e atualiza os campos solicitados nos
- * registros que baterem com o filtro.
- */
+// Itera pelos registros do arquivo e atualiza os campos solicitados nos
+// registros que baterem com o filtro.
 void update_loop(FILE *f_bin, DataHeader *header, bool *search_for,
                  DataRecord *filter, bool *update_fields,
                  DataRecord *updated_data) {
@@ -72,10 +68,8 @@ void update_loop(FILE *f_bin, DataHeader *header, bool *search_for,
   data_record_destroy(&record);
 }
 
-/**
- * @brief Executa a funcionalidade equivalente a um "UPDATE ... SET ... WHERE"
- * em SQL.
- */
+// Executa a funcionalidade equivalente a um "UPDATE ... SET ... WHERE"
+// em SQL.
 void update_set_where() {
   FILE *f_bin = NULL;
   DataHeader *header = NULL;

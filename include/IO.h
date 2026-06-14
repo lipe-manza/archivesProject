@@ -4,57 +4,33 @@
 #include "data_record.h"
 #include <stdio.h>
 
-/**
- * @brief Abre um arquivo binário e verifica a sua consistência.
- * @param bin_name Nome do arquivo.
- * @param mode Modo de acesso ao arquivo (ex: "rb+", "wb").
- * @return Ponteiro para o arquivo aberto, ou NULL em caso de
- * falha/inconsistência.
- */
+// Abre um arquivo binário e verifica sua consistência
+// Retorna NULL em caso de falha ou inconsistência
 FILE *open_binary_file(char *bin_name, char *mode);
 
-/**
- * @brief Vai até o primeiro byte do arquivo, escreve '0' para marcá-lo como
- * inconsistente e força a gravação no disco.
- * @param f_bin Ponteiro para o arquivo binário.
- */
+// Marca o arquivo como inconsistente escrevendo no primeiro byte
 void mark_file_inconsistent(FILE *f_bin);
 
-/**
- * @brief Imprime os dados de um registro no terminal conforme a formatação
- * exigida.
- * @param record Registro de dados a ser impresso.
- */
+// Imprime um registro no terminal no formato exigido pelo trabalho
 void display_data_record(const DataRecord *record);
 
-/**
- * @brief Imprime os dados de um registro em formato CSV.
- * @param record Registro de dados a ser impresso.
- */
+// Imprime um registro no formato CSV
 void display_data_record_csv(const DataRecord *record);
 
+// Função auxiliar usada para validar arquivo na plataforma
 void BinarioNaTela(char *arquivo);
 
+// Leitura segura de strings com aspas
 void ScanQuoteString(char *str);
 
-/**
- * @brief Lê campos digitados no terminal e preenche um novo registro de dados.
- * @param new_record Registro vazio que receberá os dados lidos.
- */
+// Lê dados do terminal e monta um novo registro
 void read_data_record_from_stdin(DataRecord *new_record);
 
-/**
- * @brief Imprime a mensagem de cabeçalho.
- * @param str String do cabeçalho.
- */
+// Imprime mensagem de cabeçalho no terminal
 void print_header_message(char *str);
 
-/**
- * @brief Conversão segura de ASCII para Inteiro. Retorna um valor padrão se a
- * string for vazia.
- * @param string String a ser convertida.
- * @param val Valor padrão caso a string seja vazia.
- */
+// Converte string para inteiro de forma segura
+// Retorna valor padrão caso a string esteja vazia
 int safe_atoi(char *string, int val);
 
 #endif

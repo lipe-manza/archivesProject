@@ -7,11 +7,9 @@
 #include "../../include/hash_tables.h"
 #include "../../include/sql_functions.h"
 
-/**
- * @brief Função auxiliar para evitar repetição de código em caso de falha no
- * processamento do arquivo. Libera toda a memória alocada e fecha os arquivos
- * abertos antes de imprimir a mensagem de erro.
- */
+// Função auxiliar para evitar repetição de código em caso de falha no
+// processamento do arquivo. Libera toda a memória alocada e fecha os arquivos
+// abertos antes de imprimir a mensagem de erro.
 void file_processing_failure(FILE **f_csv, FILE **f_bin, HashEstacao **hash_est,
                              HashPar **hash_par, DataHeader **header,
                              DataRecord **record) {
@@ -41,11 +39,9 @@ void file_processing_failure(FILE **f_csv, FILE **f_bin, HashEstacao **hash_est,
   printf("Falha no processamento do arquivo.\n");
 }
 
-/**
- * @brief Função principal para converter o arquivo .csv de entrada em um
- * arquivo binário .bin. Lê os dados sequencialmente, popula os registros de
- * dados e indexa as estações e pares únicos.
- */
+// Função principal para converter o arquivo .csv de entrada em um
+// arquivo binário .bin. Lê os dados sequencialmente, popula os registros de
+// dados e indexa as estações e pares únicos.
 void create_table() {
   FILE *f_csv = NULL;
   FILE *f_bin = NULL;

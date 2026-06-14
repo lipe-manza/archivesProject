@@ -28,9 +28,7 @@ struct hash_par {
   int count;
 };
 
-/**
- * @brief Função hash para strings usando o algoritmo djb2.
- */
+// Função hash para strings usando o algoritmo djb2.
 static unsigned int hash_string(const char *str) {
   unsigned int hash = 5381;
   int c;
@@ -39,9 +37,7 @@ static unsigned int hash_string(const char *str) {
   return hash % TABLE_SIZE;
 }
 
-/**
- * @brief Função hash para pares de inteiros.
- */
+// Função hash para pares de inteiros.
 static unsigned int hash_int_pair(int c1, int c2) {
   // Combinação usando números primos para reduzir colisões
   return (unsigned int)((c1 * 31) + (c2 * 17)) % TABLE_SIZE;

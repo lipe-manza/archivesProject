@@ -6,11 +6,9 @@
 #include "../../include/data_record.h"
 #include "../../include/sql_functions.h"
 
-/**
- * @brief Função auxiliar para evitar repetição de código quando há falha no
- * processamento. Libera a memória alocada e fecha arquivos abertos antes de
- * exibir a mensagem de erro.
- */
+// Função auxiliar para evitar repetição de código quando há falha no
+// processamento. Libera a memória alocada e fecha arquivos abertos antes de
+// exibir a mensagem de erro.
 void file_processing_failure_select(FILE **f_bin, DataHeader **header,
                                     DataRecord **record) {
   if (f_bin != NULL && *f_bin != NULL) {
@@ -27,11 +25,9 @@ void file_processing_failure_select(FILE **f_bin, DataHeader **header,
   printf("Falha no processamento do arquivo.\n");
 }
 
-/**
- * @brief Executa a funcionalidade equivalente a um "SELECT *" em SQL.
- * Lê todos os registros de um arquivo binário e imprime os que não estão
- * logicamente removidos.
- */
+// Executa a funcionalidade equivalente a um "SELECT *" em SQL.
+// Lê todos os registros de um arquivo binário e imprime os que não estão
+// logicamente removidos.
 void select_from() {
   FILE *f_bin = NULL;
   DataHeader *header = NULL;
