@@ -3,9 +3,7 @@
 
 // ==================== Estruturas Auxiliares Privadas ====================
 
-/**
- * @brief Página expandida usada exclusivamente na memória RAM durante o Split.
- */
+// Página expandida usada exclusivamente na memória RAM durante o Split.
 typedef struct {
   int num_keys;
   BTreeKey keys[BTREE_MAX_KEYS + 1];
@@ -14,10 +12,8 @@ typedef struct {
 
 // ==================== Funções Auxiliares (Static) ====================
 
-/**
- * @brief Pega o próximo RRN disponível. Se houver lixo (removidos),
- * desempilha. Caso contrário, pega do fim do arquivo.
- */
+// Pega o próximo RRN disponível. Se houver lixo (removidos),
+// desempilha. Caso contrário, pega do fim do arquivo.
 static int get_next_available_rrn(FILE *bin_file, BTreeHeader *header) {
   int top_stack = btree_header_get_top_of_stack(header);
   int available_rrn;
@@ -43,10 +39,8 @@ static int get_next_available_rrn(FILE *bin_file, BTreeHeader *header) {
   return available_rrn;
 }
 
-/**
- * @brief Busca a posição em que uma chave deveria estar/inserida dentro de uma
- * página. Retorna true se a chave já existe (duplicata).
- */
+// Busca a posição em que uma chave deveria estar/inserida dentro de uma
+// página. Retorna true se a chave já existe (duplicata).
 static bool search_position_in_page(BTreePage *page, int search_key, int *pos) {
   int num_keys = btree_page_get_num_of_keys(page);
 
@@ -66,9 +60,7 @@ static bool search_position_in_page(BTreePage *page, int search_key, int *pos) {
   return false;
 }
 
-/**
- * @brief Insere ordenadamente em uma página que AINDA TEM ESPAÇO.
- */
+// Insere ordenadamente em uma página que AINDA TEM ESPAÇO.
 static void insert_into_page_with_space(BTreePage *page, BTreeKey insert_key,
                                         int right_child_rrn) {
   int num_keys = btree_page_get_num_of_keys(page);
@@ -91,10 +83,8 @@ static void insert_into_page_with_space(BTreePage *page, BTreeKey insert_key,
   btree_page_set_num_of_keys(page, num_keys + 1);
 }
 
-/**
- * @brief Lógica central do Split usando a SplitPage temporária.
- * Respeita a regra acadêmica: o nó à esquerda fica com 1 chave a mais.
- */
+// Lógica central do Split usando a SplitPage temporária.
+// Respeita a regra acadêmica: o nó à esquerda fica com 1 chave a mais.
 static void perform_split(BTreePage *left_page, BTreePage *right_page,
                           BTreeKey new_key, int new_right_child,
                           BTreeKey *promoted_key) {
@@ -150,7 +140,8 @@ static void perform_split(BTreePage *left_page, BTreePage *right_page,
     btree_page_set_page_type(left_page, PAGE_TYPE_MID);
   }
 
-  // Se a esquerda era folha, a direita também será. Se era intermediário, a direita também será.
+  // Se a esquerda era folha, a direita também será. Se era intermediário, a
+  // direita também será.
   btree_page_set_page_type(right_page, btree_page_get_page_type(left_page));
 
   int j = 0;
@@ -163,9 +154,7 @@ static void perform_split(BTreePage *left_page, BTreePage *right_page,
   }
 }
 
-/**
- * @brief Função recursiva de descida e inserção.
- */
+// Função recursiva de descida e inserção.
 static int insert_recursive(FILE *bin_file, BTreeHeader *header,
                             int current_rrn, BTreeKey key,
                             BTreeKey *promoted_key, int *promoted_right_rrn) {
@@ -250,11 +239,12 @@ bool btree_insert_key(FILE *bin_file, BTreeHeader *header, BTreeKey key) {
     int new_root_rrn = get_next_available_rrn(bin_file, header);
 
     if (promoted_right_rrn == -1) {
-      btree_page_set_page_type(new_root, PAGE_TYPE_LEAF); // Quando nó-folha = nó-raiz
+      btree_page_set_page_type(new_root,
+                               PAGE_TYPE_LEAF); // Quando nó-folha = nó-raiz
     } else {
       btree_page_set_page_type(new_root, PAGE_TYPE_ROOT); // Raiz normal
     }
-    
+
     btree_page_set_num_of_keys(new_root, 1);
     btree_page_set_key(new_root, 0, promoted_key);
     btree_page_set_child_pointer(new_root, 0, root_rrn);
