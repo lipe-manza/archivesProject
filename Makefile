@@ -4,8 +4,11 @@ all:
 run:
 	./programTrab
 
+test: all
+	./test.fish
+
 clean:
-	rm -f programTrab
+	rm -f programTrab *.bin *.got
 
 ZIP_NAME = programa.zip
 

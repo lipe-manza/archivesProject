@@ -1,3 +1,5 @@
-4 estacoes.bin 2
-1 nomeEstacao "Se"
-2 nomeLinha "Prata" codLinhaIntegra 2
+8 posRemocao.bin posRemocaoBTree.bin 4
+1 codEstacao 194
+1 codEstacao 75
+1 codEstacao 200
+1 codEstacao 2

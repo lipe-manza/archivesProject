@@ -1,5 +1,6 @@
-3 estacoes.bin 4
-1 distProxEstacao 2000
-2 nomeLinha "Prata" codLinhaIntegra 2
-2 nomeLinha "Azul" codEstIntegra NULO
-2 codEstIntegra 197 codLinhaIntegra NULO
+8 estacoesRem.bin estacoesRemBTree.bin 5
+1 codEstacao 155
+1 codEstacao 117
+1 codEstacao 600
+1 codEstacao 1
+1 codEstacao 1000
