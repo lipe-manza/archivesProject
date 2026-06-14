@@ -118,6 +118,7 @@ void select_from_where_ab() {
             // Confirma se ele passa nos OUTROS critérios da cláusula WHERE
             if (match_filter(registro, search_for, filter)) {
               display_data_record(registro); // Função da IO.h
+              printf("\n");
               encontrou = true;
             }
           }
@@ -140,10 +141,12 @@ void select_from_where_ab() {
           }
         }
       }
+      printf("\n");
     }
 
     if (!encontrou) {
       printf("Registro inexistente.\n");
+      printf("\n");
     }
   }
 

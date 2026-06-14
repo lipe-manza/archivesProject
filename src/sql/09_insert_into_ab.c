@@ -105,19 +105,15 @@ void insert_into_ab() {
     if (top_stack != -1) {
       target_rrn = top_stack;
 
-      // Vai até o registro removido para descobrir o próximo da Pilha
-      // (Encadeamento)
+      // Lê diretamente o campo 'proximo' do registro removido (byte offset 1-4)
       long offset = DATA_HEADER_SIZE + (long)(target_rrn * DATA_RECORD_SIZE);
-      fseek(f_data, offset, SEEK_SET);
-
-      DataRecord *removed_record = data_record_create();
-      data_record_read(f_data, removed_record);
+      fseek(f_data, offset + 1, SEEK_SET); // Pula o byte 'removido'
+      
+      int next_in_stack = -1;
+      fread(&next_in_stack, sizeof(int), 1, f_data);
 
       // Atualiza o topo do cabeçalho com o RRN encadeado
-      int next_in_stack = data_record_get_proximo(removed_record);
       data_header_set_topo(data_header, next_in_stack);
-
-      data_record_destroy(&removed_record);
     } else {
       // Se a pilha estiver vazia, insere no final do arquivo
       target_rrn = next_rrn;

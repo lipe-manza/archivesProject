@@ -39,6 +39,7 @@ int main() {
     break;
   case 9: // INSERT INTO AB
     insert_into_ab();
+    break;
   case 10: // DELETE FROM WHERE AB
     delete_from_where_ab();
     break;

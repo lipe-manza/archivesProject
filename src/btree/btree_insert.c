@@ -146,7 +146,11 @@ static void perform_split(BTreePage *left_page, BTreePage *right_page,
   btree_page_set_next_in_stack(right_page, -1);
   btree_page_set_num_of_keys(right_page, sp.num_keys - mid - 1);
 
-  // Se a esquerda era folha, a direita também será
+  if (btree_page_get_page_type(left_page) == PAGE_TYPE_ROOT) {
+    btree_page_set_page_type(left_page, PAGE_TYPE_MID);
+  }
+
+  // Se a esquerda era folha, a direita também será. Se era intermediário, a direita também será.
   btree_page_set_page_type(right_page, btree_page_get_page_type(left_page));
 
   int j = 0;
@@ -245,15 +249,16 @@ bool btree_insert_key(FILE *bin_file, BTreeHeader *header, BTreeKey key) {
     BTreePage *new_root = btree_page_create();
     int new_root_rrn = get_next_available_rrn(bin_file, header);
 
-    btree_page_set_page_type(new_root, PAGE_TYPE_ROOT);
+    if (promoted_right_rrn == -1) {
+      btree_page_set_page_type(new_root, PAGE_TYPE_LEAF); // Quando nó-folha = nó-raiz
+    } else {
+      btree_page_set_page_type(new_root, PAGE_TYPE_ROOT); // Raiz normal
+    }
+    
     btree_page_set_num_of_keys(new_root, 1);
     btree_page_set_key(new_root, 0, promoted_key);
     btree_page_set_child_pointer(new_root, 0, root_rrn);
     btree_page_set_child_pointer(new_root, 1, promoted_right_rrn);
-
-    // Se o root anterior era folha (-1), significa que a nova raiz é a
-    // primeira. Se já existia raiz, nós setamos o tipoNode corretamente para a
-    // antiga recursivamente.
 
     btree_page_write(bin_file, new_root, new_root_rrn);
 

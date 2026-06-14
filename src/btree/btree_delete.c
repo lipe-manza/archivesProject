@@ -91,18 +91,34 @@ static int handle_underflow(FILE *bin_file, BTreeHeader *header,
   // 1. Tenta Redistribuição com a Irmã da Direita
   if (right_sibling_rrn != -1) {
     btree_page_read(bin_file, sibling, right_sibling_rrn);
-    if (btree_page_get_num_of_keys(sibling) > 1) { // Tem chave sobrando
-      // Desce a chave do pai para o final do filho
+    int sib_keys = btree_page_get_num_of_keys(sibling);
+    if (sib_keys > 1) { // Tem chave sobrando
+      int keys_to_take = sib_keys - 1; // Sibling ficará com 1 chave para ser uniforme e priorizar a esquerda
+      
+      // Desce a chave do pai para o início do filho
       btree_page_set_key(child, 0, btree_page_get_key(parent, child_idx));
-      btree_page_set_child_pointer(child, 1,
-                                   btree_page_get_child_pointer(sibling, 0));
-      btree_page_set_num_of_keys(child, 1);
+      btree_page_set_child_pointer(child, 1, btree_page_get_child_pointer(sibling, 0));
 
-      // Sobe a primeira chave da direita (promovida) para o pai
-      btree_page_set_key(parent, child_idx, btree_page_get_key(sibling, 0));
-
-      // Shift na irmã da direita para remover a chave que subiu
-      remove_key_from_page(sibling, 0);
+      if (keys_to_take == 2) {
+          // Move mais uma chave do sibling para o child
+          btree_page_set_key(child, 1, btree_page_get_key(sibling, 0));
+          btree_page_set_child_pointer(child, 2, btree_page_get_child_pointer(sibling, 1));
+          btree_page_set_num_of_keys(child, 2);
+          
+          // Sobe a segunda chave da direita (promovida) para o pai
+          btree_page_set_key(parent, child_idx, btree_page_get_key(sibling, 1));
+          
+          // Shift na irmã da direita para remover as duas chaves que saíram
+          remove_key_from_page(sibling, 0);
+          remove_key_from_page(sibling, 0);
+      } else {
+          btree_page_set_num_of_keys(child, 1);
+          // Sobe a primeira chave da direita (promovida) para o pai
+          btree_page_set_key(parent, child_idx, btree_page_get_key(sibling, 0));
+          
+          // Shift na irmã da direita para remover a chave que subiu
+          remove_key_from_page(sibling, 0);
+      }
 
       btree_page_write(bin_file, child, child_rrn);
       btree_page_write(bin_file, sibling, right_sibling_rrn);
@@ -307,7 +323,9 @@ bool btree_delete_key(FILE *bin_file, BTreeHeader *header, int search_key) {
       // Atualiza status do novo nó raiz para PAGE_TYPE_ROOT
       BTreePage *new_root = btree_page_create();
       btree_page_read(bin_file, new_root, new_root_rrn);
-      btree_page_set_page_type(new_root, PAGE_TYPE_ROOT);
+      if (btree_page_get_page_type(new_root) != PAGE_TYPE_LEAF) {
+        btree_page_set_page_type(new_root, PAGE_TYPE_ROOT);
+      }
       btree_page_write(bin_file, new_root, new_root_rrn);
       btree_page_destroy(&new_root);
     }

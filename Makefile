@@ -10,4 +10,4 @@ clean:
 ZIP_NAME = programa.zip
 
 zip: clean
-	zip -r $(ZIP_NAME) data/ include/ src/ Makefile
+	zip -r $(ZIP_NAME)  include/ src/ Makefile

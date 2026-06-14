@@ -224,7 +224,7 @@ bool data_record_write(FILE *bin_file, const DataRecord *record) {
   int lixo_size = RECORD_SIZE - bytes_usados;
 
   if (lixo_size > 0) {
-    char buffer_lixo[41];
+    char buffer_lixo[81];
     memset(buffer_lixo, '$', lixo_size);
     fwrite(buffer_lixo, sizeof(char), lixo_size, bin_file);
   }
