@@ -1,104 +1,152 @@
-/* #include "../../include/IO.h"
+#include "../../include/IO.h"
+#include "../../include/btree.h"
+#include "../../include/data_header.h"
+#include "../../include/data_record.h"
 #include "../../include/filtro.h"
 #include "../../include/sql_functions.h"
+#include <stdio.h>
+#include <stdlib.h>
 
-// Função auxiliar para fechar os arquivos
-void close_files(FILE *f_entrada, FILE *f_arvore_b) {
-  if (f_entrada)
-    fclose(f_entrada);
-  if (f_arvore_b)
-    fclose(f_arvore_b);
+#define DATA_HEADER_SIZE 17
+
+/**
+ * @brief Função auxiliar para fechar arquivos e limpar a memória de forma
+ * segura.
+ */
+static void cleanup_resources(FILE **f_entrada, FILE **f_arvore_b,
+                              DataHeader **dh, BTreeHeader **bth,
+                              DataRecord **filter, DataRecord **reg) {
+  if (f_entrada && *f_entrada) {
+    fclose(*f_entrada);
+    *f_entrada = NULL;
+  }
+  if (f_arvore_b && *f_arvore_b) {
+    fclose(*f_arvore_b);
+    *f_arvore_b = NULL;
+  }
+
+  if (dh)
+    data_header_destroy(dh);
+  if (bth)
+    btree_header_destroy(bth);
+  if (filter)
+    data_record_destroy(filter);
+  if (reg)
+    data_record_destroy(reg);
 }
 
-void select_from_where() {
-  // Lê o nome do arquivo binário de entrada e da árvore B
+/**
+ * @brief Funcionalidade [8]: Busca registros no arquivo de dados utilizando o
+ * índice Árvore-B quando o codEstacao for informado.
+ */
+void select_from_where_ab() {
   char nome_entrada[50];
   char nome_arvore_b[50];
 
-  if (scanf("%s %s", nome_entrada, nome_arvore_b) != 2) {
-    printf("Falha na leitura dos nomes do arquivos.\n");
-    return;
-  }
-
-  // Abre o arquivo binário de entrada para leitura e verifica se a abertura
-  // foi bem sucedida conferindo o status do arquivo
-  FILE *f_entrada = open_bin(nome_entrada, "rb");
-  if (f_entrada == NULL)
+  // Lê os nomes dos arquivos
+  if (scanf("%s %s", nome_entrada, nome_arvore_b) != 2)
     return;
 
-  // Vai para o campo proxRRN do registro de cabeçalho para ler quantos
-  // registros existem
-  int reg_count = 0;
-  fseek(f_entrada, POS_PROX_RRN, SEEK_SET);
-  if (fread(&reg_count, sizeof(int), 1, f_entrada) != 1) {
+  FILE *f_entrada = fopen(nome_entrada, "rb");
+  if (f_entrada == NULL) {
     printf("Falha no processamento do arquivo.\n");
-    fclose(f_entrada);
     return;
   }
 
-  // Lê o número de consultas a serem feitas
-  int n;
-  if (scanf("%d", &n) != 1) {
-    printf("Entrada inválida.\n");
-    fclose(f_entrada);
+  FILE *f_arvore_b = fopen(nome_arvore_b, "rb");
+  if (f_arvore_b == NULL) {
+    printf("Falha no processamento do arquivo.\n");
+    cleanup_resources(&f_entrada, NULL, NULL, NULL, NULL, NULL);
     return;
   }
 
-  // Itera sobre as consultas
-  for (int i = 0; i < n; i++) {
-    // Struct registro que serve como comparação para filtrar os registros do
-    // arquivo de entrada
-    REG filter;
+  // Instancia os TADs necessários
+  DataHeader *cab_dados = data_header_create();
+  BTreeHeader *cab_btree = btree_header_create();
+  DataRecord *filter = data_record_create();
+  DataRecord *registro = data_record_create();
 
-    // Array auxiliar para informar quais campos devem ser pesquisados e
-    // comparados com o filtro
-    bool search_for[PUBLIC_FIELDS];
+  // Lê e valida a consistência de ambos os cabeçalhos
+  if (!data_header_read(f_entrada, cab_dados) ||
+      !btree_header_read(f_arvore_b, cab_btree)) {
+    printf("Falha no processamento do arquivo.\n");
+    cleanup_resources(&f_entrada, &f_arvore_b, &cab_dados, &cab_btree, &filter,
+                      &registro);
+    return;
+  }
 
-    // Preenche a struct filter com os valores do filtro de pesquisa
-    // e o array search com os campos a serem comparados
-    filter_build(&filter, search_for);
+  if (data_header_get_status(cab_dados) == '0' ||
+      btree_header_get_status(cab_btree) == '0') {
+    printf("Falha no processamento do arquivo.\n");
+    cleanup_resources(&f_entrada, &f_arvore_b, &cab_dados, &cab_btree, &filter,
+                      &registro);
+    return;
+  }
 
-    // Flag para indicar se algum registro foi encontrado
+  int n_queries;
+  if (scanf("%d", &n_queries) != 1) {
+    cleanup_resources(&f_entrada, &f_arvore_b, &cab_dados, &cab_btree, &filter,
+                      &registro);
+    return;
+  }
+
+  // Processa cada uma das N buscas
+  for (int i = 0; i < n_queries; i++) {
+    bool search_for[PUBLIC_FIELDS] = {false};
+
+    // Constrói o filtro com base na entrada do usuário (Stdin)
+    filter_build(filter, search_for);
+
     bool encontrou = false;
 
-    // Se um dos campos de busca for o codEstacao, usamos a árvore B
-    if (search_for[0]) {
-      // Abre o arquivo binário da árvore B para leitura e verifica se a
-      // abertura foi bem sucedida conferindo o status do arquivo
-      FILE *f_arvore_b = open_bin(nome_arvore_b, "rb");
-      if (f_arvore_b == NULL) {
-        fclose(f_entrada);
-        return;
+    // ESTRATÉGIA 1: Busca Indexada via Árvore-B (O(log n))
+    // Verifica se o campo indexado (codEstacao mapeado para índice 0 no
+    // filtro.h) foi solicitado
+    if (search_for[COD_ESTACAO]) {
+      int search_key = data_record_get_codEstacao(filter);
+
+      // Busca o byte offset no índice
+      int offset = btree_search_key(f_arvore_b, cab_btree, search_key);
+
+      if (offset != BTREE_NOT_FOUND) {
+        // Dá o salto direto no arquivo de dados
+        fseek(f_entrada, offset, SEEK_SET);
+
+        if (data_record_read(f_entrada, registro)) {
+          // Confirma se o registro não está logicamente removido
+          if (data_record_get_removido(registro) == '0') {
+            // Confirma se ele passa nos OUTROS critérios da cláusula WHERE
+            if (match_filter(registro, search_for, filter)) {
+              display_data_record(registro); // Função da IO.h
+              encontrou = true;
+            }
+          }
+        }
       }
+    }
+    // ESTRATÉGIA 2: Busca Sequencial (Full Table Scan O(n))
+    // Quando a chave primária não foi informada na consulta
+    else {
+      int prox_rrn = data_header_get_proxRRN(cab_dados);
+      fseek(f_entrada, DATA_HEADER_SIZE, SEEK_SET);
 
-      int RRN = 0; // TROCAR PELO DA ARVORE B
-
-      REG registro;
-
-      // Lê o registro do arquivo binário
-      read_from_bin(f_entrada, &registro);
-
-      // Se o registro passa pelo filtro ele é impresso
-      if (match_filter(&registro, search_for, &filter)) {
-        encontrou = true;
-        print_registro_in_terminal(&registro);
+      for (int j = 0; j < prox_rrn; j++) {
+        if (data_record_read(f_entrada, registro)) {
+          if (data_record_get_removido(registro) == '0') {
+            if (match_filter(registro, search_for, filter)) {
+              display_data_record(registro);
+              encontrou = true;
+            }
+          }
+        }
       }
-      fclose(f_arvore_b);
-      f_arvore_b = NULL;
-    } else {
-      encontrou = search(f_entrada, reg_count, search_for, &filter);
     }
 
-    // Se nenhum registro foi encontrado, o usuário é avisado
     if (!encontrou) {
       printf("Registro inexistente.\n");
     }
-
-    // Separa as consultas por uma linha em branco
-    printf("\n");
   }
 
-  // Fecha o arquivo de entrada
-  fclose(f_entrada);
-  f_entrada = NULL;
-} */
+  cleanup_resources(&f_entrada, &f_arvore_b, &cab_dados, &cab_btree, &filter,
+                    &registro);
+}

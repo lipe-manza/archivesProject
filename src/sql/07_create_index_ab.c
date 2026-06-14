@@ -36,7 +36,7 @@ static void falha_processamento_arquivo(FILE **f1, FILE **f2, DataHeader **dh,
  * @brief Funcionalidade [7]: Cria um arquivo de índice Árvore-B a partir de
  * um arquivo de dados existente.
  */
-void create_index_ab() {
+void create_index() {
   char nome_entrada[50];
   char nome_arvore_b[50];
 

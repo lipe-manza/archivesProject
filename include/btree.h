@@ -145,4 +145,18 @@ bool btree_insert_key(FILE *bin_file, BTreeHeader *header, BTreeKey key);
  */
 int btree_search_key(FILE *bin_file, BTreeHeader *header, int search_key);
 
+/**
+ * @brief Remove uma chave do arquivo de índice Árvore-B.
+ * Trata automaticamente o underflow através de redistribuição (empréstimos),
+ * concatenações (merge) e atualizações da raiz, garantindo o descarte
+ * correto de páginas para a pilha de removidos.
+ * @param bin_file Ponteiro para o arquivo binário de índice aberto para
+ * leitura/escrita.
+ * @param header Ponteiro para o cabeçalho da Árvore-B carregado na memória.
+ * @param key_to_delete O valor da chave (codEstacao) a ser removida.
+ * @return true se a chave foi encontrada e removida com sucesso,
+ * false caso a chave não exista na árvore ou ocorra um erro.
+ */
+bool btree_delete_key(FILE *bin_file, BTreeHeader *header, int key_to_delete);
+
 #endif // BTREE_H
