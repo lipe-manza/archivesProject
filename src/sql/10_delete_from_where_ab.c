@@ -33,49 +33,54 @@ static void cleanup_resources(FILE **f_data, FILE **f_btree, DataHeader **dh,
     data_record_destroy(reg);
 }
 
-// Executa a remoção física de um registro de dados, atualizando a pilha
-// de removidos no cabeçalho do arquivo de dados.
+// Executa a remoção lógica de um registro de dados, atualizando a pilha de
+// removidos no cabeçalho do arquivo de dados.
 static void perform_data_deletion(FILE *f_data, DataHeader *cab_dados,
                                   DataRecord *registro, int rrn) {
-  // 1. Marca como removido e aponta para o antigo topo
+  // Marca o registro como removido e faz o campo 'proxRRN' apontar para o
+  // antigo topo
   data_record_set_removido(registro, '1');
   data_record_set_proximo(registro, data_header_get_topo(cab_dados));
 
-  // 2. Atualiza o topo do cabeçalho
+  // Atualiza o topo do cabeçalho
   data_header_set_topo(cab_dados, rrn);
 
-  // 3. Persiste a alteração física no disco de dados
+  // Grava as alterações do registro removido em disco
   long offset = DATA_HEADER_SIZE + (long)(rrn * DATA_RECORD_SIZE);
   fseek(f_data, offset, SEEK_SET);
   data_record_write(f_data, registro);
 }
 
-// Funcionalidade [10]: Remove registros baseados em um filtro.
-// Orquestra a deleção encadeada no arquivo de dados e o rebalanceamento no
-// índice.
+// Executa a remoção lógica dos registros que batem com o filtro e atualiza a
+// árvore B
 void delete_from_where_ab() {
   char input_filename[50];
   char btree_filename[50];
   int n_queries;
 
-  // Leitura padronizada: nome_dados, nome_indice, num_buscas
+  // Lê os nomes do arquivo de entrada e da árvore B e o número de consultas
   if (scanf("%s %s %d", input_filename, btree_filename, &n_queries) != 3)
     return;
 
+  // Abre os arquivos binários
   FILE *f_data = fopen(input_filename, "rb+");
   FILE *f_btree = fopen(btree_filename, "rb+");
 
+  // Confere se os arquivos foram abertos corretamente
   if (!f_data || !f_btree) {
     printf("Falha no processamento do arquivo.\n");
     cleanup_resources(&f_data, &f_btree, NULL, NULL, NULL, NULL);
     return;
   }
 
+  // Instancia os TADs necessários para a leituras dos cabeçalhos, registros e
+  // nós dos arquivos binários
   DataHeader *cab_dados = data_header_create();
   BTreeHeader *cab_btree = btree_header_create();
   DataRecord *filter = data_record_create();
   DataRecord *registro = data_record_create();
 
+  // Faz a leitura dos cabeçalhos dos arquivos binários
   if (!data_header_read(f_data, cab_dados) ||
       !btree_header_read(f_btree, cab_btree) ||
       data_header_get_status(cab_dados) == '0' ||
@@ -86,17 +91,16 @@ void delete_from_where_ab() {
     return;
   }
 
-  // Trava de segurança (Crash Recovery)
-  data_header_set_status(cab_dados, '0');
-  btree_header_set_status(cab_btree, '0');
-  data_header_write(f_data, cab_dados);
-  btree_header_write(f_btree, cab_btree);
+  // Usa o fflush para escrever em disco que os cabeçalhos estão inconsistentes
+  mark_file_inconsistent(f_data);
+  mark_file_inconsistent(f_btree);
 
+  // Itera sobre as consultas
   for (int i = 0; i < n_queries; i++) {
     bool search_for[PUBLIC_FIELDS] = {false};
     filter_build(filter, search_for); // Preenche struct com dados do stdin
 
-    // ESTRATÉGIA 1: O(log n) via Árvore-B se Chave Primária informada
+    // Caso 1: campo 'codEstacao', que é chave da árvore B, foi informado
     if (search_for[COD_ESTACAO]) {
       int target_key = data_record_get_codEstacao(filter);
       int offset = btree_search_key(f_btree, cab_btree, target_key);
@@ -115,7 +119,7 @@ void delete_from_where_ab() {
         }
       }
     }
-    // ESTRATÉGIA 2: O(n) Full Table Scan se não há Chave Primária
+    // Caso 2: remoção comum iterando por toda a tabela
     else {
       int prox_rrn = data_header_get_proxRRN(cab_dados);
 
@@ -139,13 +143,15 @@ void delete_from_where_ab() {
     }
   }
 
-  // Libera a trava (Consistência reestabelecida)
+  // Atualiza a consistência do arquivo nas structs de cabeçalho
   data_header_set_status(cab_dados, '1');
   btree_header_set_status(cab_btree, '1');
 
+  // Atualiza o número de estações e número de pares de estações usando as
+  // hashtables
   update_statistics(f_data, cab_dados);
 
-  // Persiste cabeçalhos para o disco
+  // Escreve cabeçalhos no disco
   data_header_write(f_data, cab_dados);
   btree_header_write(f_btree, cab_btree);
 
@@ -153,7 +159,6 @@ void delete_from_where_ab() {
   cleanup_resources(&f_data, &f_btree, &cab_dados, &cab_btree, &filter,
                     &registro);
 
-  // Validação run.codes
   BinarioNaTela(input_filename);
   BinarioNaTela(btree_filename);
 }

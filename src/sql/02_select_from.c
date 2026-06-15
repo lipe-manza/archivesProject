@@ -25,8 +25,7 @@ void file_processing_failure_select(FILE **f_bin, DataHeader **header,
   printf("Falha no processamento do arquivo.\n");
 }
 
-// Executa a funcionalidade equivalente a um "SELECT *" em SQL.
-// Lê todos os registros de um arquivo binário e imprime os que não estão
+// Lê todos os registros do arquivo binário e imprime os que não estão
 // logicamente removidos.
 void select_from() {
   FILE *f_bin = NULL;

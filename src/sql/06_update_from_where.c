@@ -63,13 +63,16 @@ void update_loop(FILE *f_bin, DataHeader *header, bool *search_for,
     if (match_filter(record, search_for, filter)) {
       data_record_update(f_bin, rrn, update_fields, updated_data);
     }
+
+    // Se tiver o mesmo 'codEstacao' do filtro, encerra a busca
+    if (match_codEstacao(record, search_for, filter))
+      break;
   }
 
   data_record_destroy(&record);
 }
 
-// Executa a funcionalidade equivalente a um "UPDATE ... SET ... WHERE"
-// em SQL.
+// Atualiza os registros não removidos que batem com o filtro
 void update_set_where() {
   FILE *f_bin = NULL;
   DataHeader *header = NULL;
