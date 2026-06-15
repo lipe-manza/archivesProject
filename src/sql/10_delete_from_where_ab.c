@@ -12,9 +12,11 @@
 #define DATA_RECORD_SIZE 80
 
 // Libera os TADs e fecha os arquivos de forma segura.
-static void cleanup_resources(FILE **f_data, FILE **f_btree, DataHeader **dh,
-                              BTreeHeader **bth, DataRecord **filter,
-                              DataRecord **reg) {
+static void file_processing_failure_delete_bt(FILE **f_data, FILE **f_btree,
+                                              DataHeader **dh,
+                                              BTreeHeader **bth,
+                                              DataRecord **filter,
+                                              DataRecord **reg) {
   if (f_data && *f_data) {
     fclose(*f_data);
     *f_data = NULL;
@@ -31,6 +33,8 @@ static void cleanup_resources(FILE **f_data, FILE **f_btree, DataHeader **dh,
     data_record_destroy(filter);
   if (reg)
     data_record_destroy(reg);
+
+  printf("Falha no processamento do arquivo.\n");
 }
 
 // Executa a remoção lógica de um registro de dados, atualizando a pilha de
@@ -62,14 +66,15 @@ void delete_from_where_ab() {
   if (scanf("%s %s %d", input_filename, btree_filename, &n_queries) != 3)
     return;
 
-  // Abre os arquivos binários
-  FILE *f_data = fopen(input_filename, "rb+");
-  FILE *f_btree = fopen(btree_filename, "rb+");
+  // Abre os arquivos binários para escrita e leitura, confere a consistencia e
+  // marca o status como inconsistentes
+  FILE *f_data = open_binary_file(input_filename, "rb+");
+  FILE *f_btree = open_binary_file(btree_filename, "rb+");
 
   // Confere se os arquivos foram abertos corretamente
   if (!f_data || !f_btree) {
-    printf("Falha no processamento do arquivo.\n");
-    cleanup_resources(&f_data, &f_btree, NULL, NULL, NULL, NULL);
+    file_processing_failure_delete_bt(&f_data, &f_btree, NULL, NULL, NULL,
+                                      NULL);
     return;
   }
 
@@ -82,18 +87,11 @@ void delete_from_where_ab() {
 
   // Faz a leitura dos cabeçalhos dos arquivos binários
   if (!data_header_read(f_data, cab_dados) ||
-      !btree_header_read(f_btree, cab_btree) ||
-      data_header_get_status(cab_dados) == '0' ||
-      btree_header_get_status(cab_btree) == '0') {
-    printf("Falha no processamento do arquivo.\n");
-    cleanup_resources(&f_data, &f_btree, &cab_dados, &cab_btree, &filter,
-                      &registro);
+      !btree_header_read(f_btree, cab_btree)) {
+    file_processing_failure_delete_bt(&f_data, &f_btree, &cab_dados, &cab_btree,
+                                      &filter, &registro);
     return;
   }
-
-  // Usa o fflush para escrever em disco que os cabeçalhos estão inconsistentes
-  mark_file_inconsistent(f_data);
-  mark_file_inconsistent(f_btree);
 
   // Itera sobre as consultas
   for (int i = 0; i < n_queries; i++) {
@@ -156,8 +154,14 @@ void delete_from_where_ab() {
   btree_header_write(f_btree, cab_btree);
 
   // Limpeza de heap e ponteiros
-  cleanup_resources(&f_data, &f_btree, &cab_dados, &cab_btree, &filter,
-                    &registro);
+  fclose(f_data);
+  f_data = NULL;
+  fclose(f_btree);
+  f_btree = NULL;
+  data_header_destroy(&cab_dados);
+  btree_header_destroy(&cab_btree);
+  data_record_destroy(&filter);
+  data_record_destroy(&registro);
 
   BinarioNaTela(input_filename);
   BinarioNaTela(btree_filename);

@@ -88,7 +88,8 @@ void select_from_where() {
   // Abre o arquivo .bin para leitura e verifica consistência
   f_bin = open_binary_file(bin_name, "rb");
   if (f_bin == NULL) {
-    return; // open_binary_file já lida com a mensagem e o close
+    file_processing_failure_where(&f_bin, &header, &filter);
+    return;
   }
 
   // Cria a struct do cabeçalho lendo do arquivo binário

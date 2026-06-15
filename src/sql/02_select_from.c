@@ -36,7 +36,6 @@ void select_from() {
   char bin_name[50];
   if (scanf("%s", bin_name) != 1) {
     file_processing_failure_select(&f_bin, &header, &record);
-    printf("Nome\n");
     return;
   }
 
@@ -44,9 +43,7 @@ void select_from() {
   // foi bem sucedida conferindo o status do arquivo
   f_bin = open_binary_file(bin_name, "rb");
   if (f_bin == NULL) {
-    printf("f_bin NULL\n");
-    // open_binary_file já imprime a mensagem de erro e lida com o close, então
-    // apenas encerramos
+    file_processing_failure_select(&f_bin, &header, &record);
     return;
   }
 
@@ -54,7 +51,6 @@ void select_from() {
   header = data_header_create();
   if (header == NULL || !data_header_read(f_bin, header)) {
     file_processing_failure_select(&f_bin, &header, &record);
-    printf("Header\n");
     return;
   }
 
@@ -62,7 +58,6 @@ void select_from() {
   record = data_record_create();
   if (record == NULL) {
     file_processing_failure_select(&f_bin, &header, &record);
-    printf("Record\n");
     return;
   }
 

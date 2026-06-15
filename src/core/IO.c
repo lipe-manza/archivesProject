@@ -12,45 +12,49 @@ FILE *open_binary_file(char *bin_name, char *mode) {
 
   // Verifica se o arquivo pode ser aberto
   if (f_bin == NULL) {
-    printf("Falha no processamento do arquivo.\n");
     return NULL;
   }
 
+  char status = '0';
   // Verifica se o arquivo não está sendo aberto para criação
   if (mode[0] != 'w') {
-    char status = '0';
-
     fread(&status, sizeof(char), 1, f_bin);
 
     // Se o status estiver inconsistente, o arquivo não pode ser usado
     if (status == '0') {
-      printf("Falha no processamento do arquivo.\n");
       fclose(f_bin);
       return NULL;
     }
   }
 
+  // Se nao for abrir, apenas para leitura, marca como inconsistente
+  if (strcmp(mode, "rb") != 0) {
+    status = '0';
+    fseek(f_bin, 0, SEEK_SET);
+    fwrite(&status, sizeof(char), 0, f_bin);
+    fflush(f_bin);
+  }
+
   // Retorna com segurança para o início do arquivo
   fseek(f_bin, 0, SEEK_SET);
-
   return f_bin;
 }
 
-void mark_file_inconsistent(FILE *f_bin) {
-  if (f_bin == NULL)
-    return;
+/* void mark_file_inconsistent(FILE *f_bin) { */
+/*   if (f_bin == NULL) */
+/*     return; */
 
-  long pos = ftell(f_bin);
-  char status = '0';
+/*   long pos = ftell(f_bin); */
+/*   char status = '0'; */
 
-  // Volta para o byte 0 antes de escrever a flag de status inconsistente
-  fseek(f_bin, 0, SEEK_SET);
-  fwrite(&status, sizeof(char), 1, f_bin);
-  fflush(f_bin);
+/*   // Volta para o byte 0 antes de escrever a flag de status inconsistente */
+/*   fseek(f_bin, 0, SEEK_SET); */
+/*   fwrite(&status, sizeof(char), 1, f_bin); */
+/*   fflush(f_bin); */
 
-  // Retorna para a posição original onde a função foi chamada
-  fseek(f_bin, pos, SEEK_SET);
-}
+/*   // Retorna para a posição original onde a função foi chamada */
+/*   fseek(f_bin, pos, SEEK_SET); */
+/* } */
 
 void display_data_record(const DataRecord *record) {
   if (record == NULL)

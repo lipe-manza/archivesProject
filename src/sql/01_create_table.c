@@ -78,17 +78,14 @@ void create_table() {
     return;
   }
 
-  // Cria o arquivo .bin com modo de escrita binária ("wb")
+  // Cria o arquivo .bin com modo de escrita binária ("wb"), e marca como
+  // inconsistente o status
   f_bin = open_binary_file(bin_name, "wb");
   if (f_bin == NULL) {
     file_processing_failure(&f_csv, &f_bin, &hash_est, &hash_par, &header,
                             &record);
     return;
   }
-
-  // Marca o arquivo como inconsistente ('0') logo após a abertura e força a
-  // gravação no disco com fflush, conforme exigido.
-  mark_file_inconsistent(f_bin);
 
   // Instancia o cabeçalho (inicia com status inconsistente '0' por padrão)
   header = data_header_create();

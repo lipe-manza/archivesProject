@@ -89,11 +89,9 @@ void update_set_where() {
   // Abre o arquivo binário para leitura e escrita
   f_bin = open_binary_file(bin_name, "rb+");
   if (f_bin == NULL) {
+    file_processing_failure_update(&f_bin, &header, &filter, &updated);
     return;
   }
-
-  // Marca como inconsistente durante as operações
-  mark_file_inconsistent(f_bin);
 
   // Cria e lê a struct do cabeçalho
   header = data_header_create();

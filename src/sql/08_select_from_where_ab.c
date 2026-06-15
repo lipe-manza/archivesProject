@@ -11,9 +11,10 @@
 
 // Função auxiliar para fechar arquivos e limpar a memória de forma
 // segura.
-static void cleanup_resources(FILE **f_entrada, FILE **f_arvore_b,
-                              DataHeader **dh, BTreeHeader **bth,
-                              DataRecord **filter, DataRecord **reg) {
+static void
+file_processing_failure_select_bt(FILE **f_entrada, FILE **f_arvore_b,
+                                  DataHeader **dh, BTreeHeader **bth,
+                                  DataRecord **filter, DataRecord **reg) {
   if (f_entrada && *f_entrada) {
     fclose(*f_entrada);
     *f_entrada = NULL;
@@ -31,9 +32,11 @@ static void cleanup_resources(FILE **f_entrada, FILE **f_arvore_b,
     data_record_destroy(filter);
   if (reg)
     data_record_destroy(reg);
+
+  printf("Falha no processamento do arquivo.\n");
 }
 
-// Funcionalidade [8]: Busca registros no arquivo de dados utilizando o
+// Busca registros no arquivo de dados utilizando o
 // índice Árvore-B quando o codEstacao for informado.
 void select_from_where_ab() {
   char nome_entrada[50];
@@ -43,16 +46,19 @@ void select_from_where_ab() {
   if (scanf("%s %s", nome_entrada, nome_arvore_b) != 2)
     return;
 
-  FILE *f_entrada = fopen(nome_entrada, "rb");
+  // Abre o arquivo .bin para leitura e verifica se a abertura
+  // foi bem sucedida conferindo o status do arquivo
+  FILE *f_entrada = open_binary_file(nome_entrada, "rb");
   if (f_entrada == NULL) {
-    printf("Falha no processamento do arquivo.\n");
+    file_processing_failure_select_bt(NULL, NULL, NULL, NULL, NULL, NULL);
     return;
   }
 
-  FILE *f_arvore_b = fopen(nome_arvore_b, "rb");
+  // Abre o arquivo .bin para leitura e verifica se a abertura
+  // foi bem sucedida conferindo o status do arquivo
+  FILE *f_arvore_b = open_binary_file(nome_arvore_b, "rb");
   if (f_arvore_b == NULL) {
-    printf("Falha no processamento do arquivo.\n");
-    cleanup_resources(&f_entrada, NULL, NULL, NULL, NULL, NULL);
+    file_processing_failure_select_bt(&f_entrada, NULL, NULL, NULL, NULL, NULL);
     return;
   }
 
@@ -62,27 +68,18 @@ void select_from_where_ab() {
   DataRecord *filter = data_record_create();
   DataRecord *registro = data_record_create();
 
-  // Lê e valida a consistência de ambos os cabeçalhos
+  // Le os cabecalhos dos arquivos
   if (!data_header_read(f_entrada, cab_dados) ||
       !btree_header_read(f_arvore_b, cab_btree)) {
-    printf("Falha no processamento do arquivo.\n");
-    cleanup_resources(&f_entrada, &f_arvore_b, &cab_dados, &cab_btree, &filter,
-                      &registro);
-    return;
-  }
-
-  if (data_header_get_status(cab_dados) == '0' ||
-      btree_header_get_status(cab_btree) == '0') {
-    printf("Falha no processamento do arquivo.\n");
-    cleanup_resources(&f_entrada, &f_arvore_b, &cab_dados, &cab_btree, &filter,
-                      &registro);
+    file_processing_failure_select_bt(&f_entrada, &f_arvore_b, &cab_dados,
+                                      &cab_btree, &filter, &registro);
     return;
   }
 
   int n_queries;
   if (scanf("%d", &n_queries) != 1) {
-    cleanup_resources(&f_entrada, &f_arvore_b, &cab_dados, &cab_btree, &filter,
-                      &registro);
+    file_processing_failure_select_bt(&f_entrada, &f_arvore_b, &cab_dados,
+                                      &cab_btree, &filter, &registro);
     return;
   }
 
@@ -146,7 +143,16 @@ void select_from_where_ab() {
       printf("\n");
     }
   }
+
   // Fecha arquivos e limpa a memória
-  cleanup_resources(&f_entrada, &f_arvore_b, &cab_dados, &cab_btree, &filter,
-                    &registro);
+
+  fclose(f_entrada);
+  f_entrada = NULL;
+  fclose(f_arvore_b);
+  f_arvore_b = NULL;
+
+  data_header_destroy(&cab_dados);
+  btree_header_destroy(&cab_btree);
+  data_record_destroy(&registro);
+  data_record_destroy(&filter);
 }

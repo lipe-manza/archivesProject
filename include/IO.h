@@ -5,11 +5,12 @@
 #include <stdio.h>
 
 // Abre um arquivo binário e verifica sua consistência
+// Marca como inconsitente se o arquivo for aberto para escrita
 // Retorna NULL em caso de falha ou inconsistência
 FILE *open_binary_file(char *bin_name, char *mode);
 
-// Marca o arquivo como inconsistente escrevendo no primeiro byte
-void mark_file_inconsistent(FILE *f_bin);
+// // Marca o arquivo como inconsistente escrevendo no primeiro byte
+// void mark_file_inconsistent(FILE *f_bin);
 
 // Imprime um registro no terminal no formato exigido pelo trabalho
 void display_data_record(const DataRecord *record);

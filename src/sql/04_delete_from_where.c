@@ -93,15 +93,13 @@ void delete_from_where() {
     return;
   }
 
-  // Abre o arquivo .bin para leitura e escrita (rb+) e verifica consistência
+  // Abre o arquivo .bin para leitura e escrita (rb+), verifica consistência e
+  // marca como inconsistente o status
   f_bin = open_binary_file(bin_name, "rb+");
   if (f_bin == NULL) {
-    // open_binary_file já imprime o erro e realiza o close apropriado
+    file_processing_failure_delete(&f_bin, &header, &filter);
     return;
   }
-
-  // Marca o arquivo como inconsistente durante o processo de alteração
-  mark_file_inconsistent(f_bin);
 
   // Instancia e carrega o cabeçalho
   header = data_header_create();

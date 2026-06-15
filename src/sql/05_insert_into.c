@@ -91,14 +91,13 @@ void insert_into() {
     return;
   }
 
-  // Abre o arquivo .bin para leitura e escrita (rb+) e confere o status
+  // Abre o arquivo .bin para leitura e escrita (rb+) e confere o status se esta
+  // insconsistente, e marca como insconsistente o status
   f_bin = open_binary_file(bin_name, "rb+");
   if (f_bin == NULL) {
+    file_processing_failure_insert(&f_bin, &header, &record);
     return; // A função de abertura já lida com prints e close
   }
-
-  // Marca o arquivo como inconsistente durante as alterações
-  mark_file_inconsistent(f_bin);
 
   // Instancia e lê os dados do cabeçalho
   header = data_header_create();

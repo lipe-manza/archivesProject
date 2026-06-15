@@ -11,8 +11,9 @@
 #define DATA_RECORD_SIZE 80
 
 // Função auxiliar para fechar arquivos e evitar vazamentos de memória
-static void cleanup_resources(FILE **f_data, FILE **f_btree, DataHeader **dh,
-                              BTreeHeader **bth, DataRecord **reg) {
+void file_processing_failure_insert_bt(FILE **f_data, FILE **f_btree,
+                                       DataHeader **dh, BTreeHeader **bth,
+                                       DataRecord **reg) {
   if (f_data && *f_data) {
     fclose(*f_data);
     *f_data = NULL;
@@ -28,32 +29,33 @@ static void cleanup_resources(FILE **f_data, FILE **f_btree, DataHeader **dh,
     btree_header_destroy(bth);
   if (reg)
     data_record_destroy(reg);
+
+  printf("Falha no processamento do arquivo.\n");
 }
 
-// Funcionalidade [9]: Insere novos registros no arquivo de dados
+// Insere novos registros no arquivo de dados
 // reaproveitando espaços removidos e indexa a nova inserção na Árvore-B
 void insert_into_ab() {
   char input_filename[50];
   char btree_filename[50];
   int num_insertions;
 
-  // Lê os parâmetros iniciais da Funcionalidade [9]
+  // Lê os parâmetros iniciais da
   if (scanf("%s %s %d", input_filename, btree_filename, &num_insertions) != 3) {
     printf("Falha no processamento do arquivo.\n");
     return;
   }
 
-  // Abre ambos os arquivos em modo de atualização (leitura/escrita binária)
-  FILE *f_data = fopen(input_filename, "rb+");
+  // Abre ambos os arquivos em modo de atualização (leitura/escrita binária),
+  // conferindo se estao consistente e setando como status inconsistentes
+  FILE *f_data = open_binary_file(input_filename, "rb+");
   if (f_data == NULL) {
-    printf("Falha no processamento do arquivo.\n");
+    file_processing_failure_insert_bt(NULL, NULL, NULL, NULL, NULL);
     return;
   }
-
-  FILE *f_btree = fopen(btree_filename, "rb+");
+  FILE *f_btree = open_binary_file(btree_filename, "rb+");
   if (f_btree == NULL) {
-    printf("Falha no processamento do arquivo.\n");
-    cleanup_resources(&f_data, NULL, NULL, NULL, NULL);
+    file_processing_failure_insert_bt(&f_data, NULL, NULL, NULL, NULL);
     return;
   }
 
@@ -65,26 +67,14 @@ void insert_into_ab() {
   // Valida as leituras dos cabeçalhos
   if (!data_header_read(f_data, data_header) ||
       !btree_header_read(f_btree, btree_header)) {
-    printf("Falha no processamento do arquivo.\n");
-    cleanup_resources(&f_data, &f_btree, &data_header, &btree_header,
-                      &new_record);
-    return;
-  }
-
-  // Checagem de consistência prévia
-  if (data_header_get_status(data_header) == '0' ||
-      btree_header_get_status(btree_header) == '0') {
-    printf("Falha no processamento do arquivo.\n");
-    cleanup_resources(&f_data, &f_btree, &data_header, &btree_header,
-                      &new_record);
+    file_processing_failure_insert_bt(&f_data, &f_btree, &data_header,
+                                      &btree_header, &new_record);
     return;
   }
 
   // Trava os arquivos definindo como inconsistentes durante o processamento
-  // (Crash Recovery)
   data_header_set_status(data_header, '0');
   btree_header_set_status(btree_header, '0');
-  update_statistics(f_data, data_header);
   data_header_write(f_data, data_header);
   btree_header_write(f_btree, btree_header);
 
@@ -132,21 +122,26 @@ void insert_into_ab() {
     key.C = data_record_get_codEstacao(new_record);
     key.Pr = byte_offset;
 
+    // Insere a chave na B-Tree
     btree_insert_key(f_btree, btree_header, key);
   }
 
-  // Libera a trava (Consistência reestabelecida)
+  // Atualiza os dados de cabecalhos
   data_header_set_status(data_header, '1');
   btree_header_set_status(btree_header, '1');
 
-  // Persiste as metadados finais (Nro Nos, Nro Chaves, Prox RRN, etc.)
   update_statistics(f_data, data_header);
   data_header_write(f_data, data_header);
   btree_header_write(f_btree, btree_header);
 
   // Destrói TADs e fecha arquivos
-  cleanup_resources(&f_data, &f_btree, &data_header, &btree_header,
-                    &new_record);
+  fclose(f_data);
+  f_data = NULL;
+  fclose(f_btree);
+  f_btree = NULL;
+  data_header_destroy(&data_header);
+  btree_header_destroy(&btree_header);
+  data_record_destroy(&new_record);
 
   // Chamadas obrigatórias para o avaliador automático do run.codes
   BinarioNaTela(input_filename);
