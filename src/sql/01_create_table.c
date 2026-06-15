@@ -7,12 +7,10 @@
 #include "../../include/hash_tables.h"
 #include "../../include/sql_functions.h"
 
-// Função auxiliar para evitar repetição de código em caso de falha no
-// processamento do arquivo. Libera toda a memória alocada e fecha os arquivos
-// abertos antes de imprimir a mensagem de erro.
+// Chamada caso haja alguma falha no processamento. Libera a memória das
+// hashtables e fecha os arquivos abertos antes de imprimir a mensagem de erro.
 void file_processing_failure(FILE **f_csv, FILE **f_bin, HashEstacao **hash_est,
-                             HashPar **hash_par, DataHeader **header,
-                             DataRecord **record) {
+                             HashPar **hash_par) {
   if (f_csv != NULL && *f_csv != NULL) {
     fclose(*f_csv);
     *f_csv = NULL;
@@ -29,12 +27,6 @@ void file_processing_failure(FILE **f_csv, FILE **f_bin, HashEstacao **hash_est,
     free_hash_par(*hash_par);
     *hash_par = NULL;
   }
-  if (header != NULL) {
-    data_header_destroy(header);
-  }
-  if (record != NULL) {
-    data_record_destroy(record);
-  }
 
   printf("Falha no processamento do arquivo.\n");
 }
@@ -47,15 +39,15 @@ void create_table() {
   FILE *f_bin = NULL;
   HashEstacao *hash_est = NULL;
   HashPar *hash_par = NULL;
-  DataHeader *header = NULL;
-  DataRecord *record = NULL;
+
+  // Instancia na stack o cabeçalho
+  DataHeader header = {'0', -1, 0, 0, 0};
 
   // Lê os nomes dos arquivos .csv e .bin da entrada padrão
   char csv_name[50];
   char bin_name[50];
   if (scanf("%s %s", csv_name, bin_name) != 2) {
-    file_processing_failure(&f_csv, &f_bin, &hash_est, &hash_par, &header,
-                            &record);
+    file_processing_failure(&f_csv, &f_bin, &hash_est, &hash_par);
     return;
   }
 
@@ -65,16 +57,14 @@ void create_table() {
 
   // Aborta se a alocação das tabelas hash falhar
   if (hash_est == NULL || hash_par == NULL) {
-    file_processing_failure(&f_csv, &f_bin, &hash_est, &hash_par, &header,
-                            &record);
+    file_processing_failure(&f_csv, &f_bin, &hash_est, &hash_par);
     return;
   }
 
   // Abre o arquivo .csv para leitura
   f_csv = fopen(csv_name, "r");
   if (f_csv == NULL) {
-    file_processing_failure(&f_csv, &f_bin, &hash_est, &hash_par, &header,
-                            &record);
+    file_processing_failure(&f_csv, &f_bin, &hash_est, &hash_par);
     return;
   }
 
@@ -82,36 +72,18 @@ void create_table() {
   // inconsistente o status
   f_bin = open_binary_file(bin_name, "wb");
   if (f_bin == NULL) {
-    file_processing_failure(&f_csv, &f_bin, &hash_est, &hash_par, &header,
-                            &record);
-    return;
-  }
-
-  // Instancia o cabeçalho (inicia com status inconsistente '0' por padrão)
-  header = data_header_create();
-  if (header == NULL) {
-    file_processing_failure(&f_csv, &f_bin, &hash_est, &hash_par, &header,
-                            &record);
+    file_processing_failure(&f_csv, &f_bin, &hash_est, &hash_par);
     return;
   }
 
   // Escreve o cabeçalho inicial inconsistente no arquivo binário
-  data_header_write(f_bin, header);
-
-  // Instancia o registro de dados que será reutilizado dentro do loop
-  record = data_record_create();
-  if (record == NULL) {
-    file_processing_failure(&f_csv, &f_bin, &hash_est, &hash_par, &header,
-                            &record);
-    return;
-  }
+  data_header_write(f_bin, &header);
 
   char buffer[256];
 
   // Pula a primeira linha do CSV (linha de cabeçalho do arquivo texto)
   if (fgets(buffer, sizeof(buffer), f_csv) == NULL) {
-    file_processing_failure(&f_csv, &f_bin, &hash_est, &hash_par, &header,
-                            &record);
+    file_processing_failure(&f_csv, &f_bin, &hash_est, &hash_par);
     return;
   }
 
@@ -124,111 +96,106 @@ void create_table() {
     char *token;
 
     // Reseta o status de removido e o ponteiro de próximo por segurança
-    data_record_set_removido(record, '0');
-    data_record_set_proximo(record, -1);
+    DataRecord record = {0};
+    record.removido = '0';
+    record.proximo = -1;
 
     // Tokeniza a linha lida usando strsep com delimitador vírgula (',')
 
     // 1. codEstacao
     token = strsep(&p, ",");
     if (token == NULL) {
-      file_processing_failure(&f_csv, &f_bin, &hash_est, &hash_par, &header,
-                              &record);
+      file_processing_failure(&f_csv, &f_bin, &hash_est, &hash_par);
       return;
     }
-    data_record_set_codEstacao(record, safe_atoi(token, -1));
+    record.codEstacao = safe_atoi(token, -1);
 
-    // 2. nomeEstacao (O setter calcula automaticamente tamNomeEstacao)
+    // 2. nomeEstacao
     token = strsep(&p, ",");
     if (token == NULL) {
-      file_processing_failure(&f_csv, &f_bin, &hash_est, &hash_par, &header,
-                              &record);
+      file_processing_failure(&f_csv, &f_bin, &hash_est, &hash_par);
       return;
     }
-    data_record_set_nomeEstacao(record, token);
+    record.tamNomeEstacao = strlen(token);
+    strncpy(record.nomeEstacao, token, sizeof(record.nomeEstacao) - 1);
+    record.nomeEstacao[sizeof(record.nomeEstacao) - 1] = '\0';
 
     // 3. codLinha
     token = strsep(&p, ",");
     if (token == NULL) {
-      file_processing_failure(&f_csv, &f_bin, &hash_est, &hash_par, &header,
-                              &record);
+      file_processing_failure(&f_csv, &f_bin, &hash_est, &hash_par);
       return;
     }
-    data_record_set_codLinha(record, safe_atoi(token, -1));
+    record.codLinha = safe_atoi(token, -1);
 
-    // 4. nomeLinha (O setter calcula automaticamente tamNomeLinha)
+    // 4. nomeLinha
     token = strsep(&p, ",");
-    if (token == NULL) {
-      data_record_set_nomeLinha(record, "");
+    if (token == NULL || strlen(token) == 0) {
+      record.tamNomeLinha = 0;
+      record.nomeLinha[0] = '\0';
     } else {
-      data_record_set_nomeLinha(record, token);
+      record.tamNomeLinha = strlen(token);
+      strncpy(record.nomeLinha, token, sizeof(record.nomeLinha) - 1);
+      record.nomeLinha[sizeof(record.nomeLinha) - 1] = '\0';
     }
 
     // 5. codProxEstacao
     token = strsep(&p, ",");
     if (token == NULL) {
-      file_processing_failure(&f_csv, &f_bin, &hash_est, &hash_par, &header,
-                              &record);
+      file_processing_failure(&f_csv, &f_bin, &hash_est, &hash_par);
       return;
     }
-    data_record_set_codProxEstacao(record, safe_atoi(token, -1));
+    record.codProxEstacao = safe_atoi(token, -1);
 
     // 6. distProxEstacao
     token = strsep(&p, ",");
     if (token == NULL) {
-      file_processing_failure(&f_csv, &f_bin, &hash_est, &hash_par, &header,
-                              &record);
+      file_processing_failure(&f_csv, &f_bin, &hash_est, &hash_par);
       return;
     }
-    data_record_set_distProxEstacao(record, safe_atoi(token, -1));
+    record.distProxEstacao = safe_atoi(token, -1);
 
     // 7. codLinhaIntegra
     token = strsep(&p, ",");
     if (token == NULL) {
-      file_processing_failure(&f_csv, &f_bin, &hash_est, &hash_par, &header,
-                              &record);
+      file_processing_failure(&f_csv, &f_bin, &hash_est, &hash_par);
       return;
     }
-    data_record_set_codLinhaIntegra(record, safe_atoi(token, -1));
+    record.codLinhaIntegra = safe_atoi(token, -1);
 
     // 8. codEstIntegra
     token = strsep(&p, ",");
     if (token == NULL) {
-      file_processing_failure(&f_csv, &f_bin, &hash_est, &hash_par, &header,
-                              &record);
+      file_processing_failure(&f_csv, &f_bin, &hash_est, &hash_par);
       return;
     }
     token[strcspn(token, "\r\n")] = '\0';
-    data_record_set_codEstIntegra(record, safe_atoi(token, -1));
+    record.codEstIntegra = safe_atoi(token, -1);
 
     // Escreve o registro preenchido no arquivo binário
-    data_record_write(f_bin, record);
+    data_record_write(f_bin, &record);
 
     // Insere nas tabelas hash para rastrear entradas únicas
-    inserir_estacao(hash_est, data_record_get_nomeEstacao(record));
-    inserir_par(hash_par, data_record_get_codEstacao(record),
-                data_record_get_codProxEstacao(record));
+    inserir_estacao(hash_est, record.nomeEstacao);
+    inserir_par(hash_par, record.codEstacao, record.codProxEstacao);
 
     // Incrementa o proxRRN no cabeçalho
-    int current_rrn = data_header_get_proxRRN(header);
-    data_header_set_proxRRN(header, current_rrn + 1);
+    header.proxRRN++;
   }
 
   // Atualiza os contadores finais no cabeçalho após varrer todo o CSV
-  data_header_set_nroEstacoes(header, get_nro_estacoes(hash_est));
-  data_header_set_nroParesEstacoes(header, get_nro_pares(hash_par));
+  header.nroEstacoes = get_nro_estacoes(hash_est);
+  header.nroParesEstacoes = get_nro_pares(hash_par);
 
   // Marca o arquivo como consistente ('1') e reescreve o cabeçalho atualizado
-  data_header_set_status(header, '1');
-  data_header_write(f_bin, header);
+  header.status = '1';
+  data_header_write(f_bin, &header);
 
-  // Fecha arquivos e libera toda a memória dinamicamente alocada
+  // Fecha arquivos e libera a memória das hashtables
   fclose(f_csv);
   fclose(f_bin);
   free_hash_estacao(hash_est);
   free_hash_par(hash_par);
-  data_header_destroy(&header);
-  data_record_destroy(&record);
 
   // Exibe o arquivo binário na tela utilizando o código fornecido pelo
   // run.codes

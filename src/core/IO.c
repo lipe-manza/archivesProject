@@ -61,46 +61,46 @@ void display_data_record(const DataRecord *record) {
     return;
 
   // Nao podem ser nulos
-  printf("%d ", data_record_get_codEstacao(record));
-  printf("%s ", data_record_get_nomeEstacao(record));
+  printf("%d ", record->codEstacao);
+  printf("%s ", record->nomeEstacao);
 
   // Código da Linha
-  int line_code = data_record_get_codLinha(record);
+  int line_code = record->codLinha;
   if (line_code == -1)
     printf("NULO ");
   else
     printf("%d ", line_code);
 
   // Nome da Linha
-  const char *line_name = data_record_get_nomeLinha(record);
+  const char *line_name = record->nomeLinha;
   if (line_name == NULL || strlen(line_name) == 0)
     printf("NULO ");
   else
     printf("%s ", line_name);
 
   // Código da próxima estação
-  int next_station_code = data_record_get_codProxEstacao(record);
+  int next_station_code = record->codProxEstacao;
   if (next_station_code == -1)
     printf("NULO ");
   else
     printf("%d ", next_station_code);
 
   // Distância da próxima estação
-  int next_station_dist = data_record_get_distProxEstacao(record);
+  int next_station_dist = record->distProxEstacao;
   if (next_station_dist == -1)
     printf("NULO ");
   else
     printf("%d ", next_station_dist);
 
   // Código da linha integrante
-  int integ_line_code = data_record_get_codLinhaIntegra(record);
+  int integ_line_code = record->codLinhaIntegra;
   if (integ_line_code == -1)
     printf("NULO ");
   else
     printf("%d ", integ_line_code);
 
   // Código da Estação que faz a integrante
-  int integ_station_code = data_record_get_codEstIntegra(record);
+  int integ_station_code = record->codEstIntegra;
   if (integ_station_code == -1)
     printf("NULO");
   else
@@ -201,35 +201,37 @@ void read_data_record_from_stdin(DataRecord *new_record) {
 
   // Lê codEstacao
   ScanQuoteString(str);
-  data_record_set_codEstacao(new_record, strlen(str) > 0 ? atoi(str) : -1);
+  new_record->codEstacao = strlen(str) > 0 ? atoi(str) : -1;
 
   // Lê nomeEstacao
   ScanQuoteString(str);
-  data_record_set_nomeEstacao(new_record, str);
+  strcpy(new_record->nomeEstacao, str);
+  new_record->tamNomeEstacao = strlen(str);
 
   // Lê codLinha
   ScanQuoteString(str);
-  data_record_set_codLinha(new_record, strlen(str) > 0 ? atoi(str) : -1);
+  new_record->codLinha = strlen(str) > 0 ? atoi(str) : -1;
 
   // Lê nomeLinha
   ScanQuoteString(str);
-  data_record_set_nomeLinha(new_record, str);
+  strcpy(new_record->nomeLinha, str);
+  new_record->tamNomeLinha = strlen(str);
 
   // Lê codProxEstacao
   ScanQuoteString(str);
-  data_record_set_codProxEstacao(new_record, strlen(str) > 0 ? atoi(str) : -1);
+  new_record->codProxEstacao = strlen(str) > 0 ? atoi(str) : -1;
 
   // Lê distProxEstacao
   ScanQuoteString(str);
-  data_record_set_distProxEstacao(new_record, strlen(str) > 0 ? atoi(str) : -1);
+  new_record->distProxEstacao = strlen(str) > 0 ? atoi(str) : -1;
 
   // Lê codLinhaIntegra
   ScanQuoteString(str);
-  data_record_set_codLinhaIntegra(new_record, strlen(str) > 0 ? atoi(str) : -1);
+  new_record->codLinhaIntegra = strlen(str) > 0 ? atoi(str) : -1;
 
   // Lê codEstIntegra
   ScanQuoteString(str);
-  data_record_set_codEstIntegra(new_record, strlen(str) > 0 ? atoi(str) : -1);
+  new_record->codEstIntegra = strlen(str) > 0 ? atoi(str) : -1;
 }
 
 int safe_atoi(char *string, int val) {

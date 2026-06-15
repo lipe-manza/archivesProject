@@ -7,20 +7,12 @@
 #include "../../include/filtro.h"
 #include "../../include/sql_functions.h"
 
-// Função auxiliar para evitar repetição quando há falha no
-// processamento. Libera a memória de arquivos, cabeçalhos e registros de filtro
-// alocados.
-void file_processing_failure_where(FILE **f_bin, DataHeader **header,
-                                   DataRecord **filter) {
+// Função auxiliar para evitar repetição quando há falha no processamento.
+// Libera a memória de arquivos, cabeçalhos e registros de filtro alocados.
+void file_processing_failure_where(FILE **f_bin) {
   if (f_bin != NULL && *f_bin != NULL) {
     fclose(*f_bin);
     *f_bin = NULL;
-  }
-  if (header != NULL) {
-    data_header_destroy(header);
-  }
-  if (filter != NULL) {
-    data_record_destroy(filter);
   }
 
   printf("Falha no processamento do arquivo.\n");
@@ -34,40 +26,35 @@ bool search(FILE *f_bin, DataHeader *header, bool *search_for,
     return false;
 
   // Instancia um registro auxiliar para ler os dados do disco
-  DataRecord *record = data_record_create();
-  if (record == NULL)
-    return false;
+  DataRecord record;
 
   bool found = false;
 
   // Pula o cabeçalho e vai para o primeiro Registro
   fseek(f_bin, HEADER_SIZE, SEEK_SET);
 
-  int max_records = data_header_get_proxRRN(header);
+  int max_records = header->proxRRN;
 
   // Itera pelos registros do .bin
   for (int rrn = 0; rrn < max_records; rrn++) {
     // Lê o registro do arquivo binário
-    if (!data_record_read(f_bin, record)) {
+    if (!data_record_read(f_bin, &record)) {
       break;
     }
 
     // Se o registro está removido, ele não é selecionado
-    if (data_record_get_removido(record) == '1')
+    if (record.removido == '1')
       continue;
 
     // Se o registro passa pelo filtro, ele é impresso
-    if (match_filter(record, search_for, filter)) {
+    if (match_filter(&record, search_for, filter)) {
       found = true;
-      display_data_record(record);
+      display_data_record(&record);
     }
     // Se tiver o mesmo 'codEstacao' do filtro, encerra a busca
-    if (match_codEstacao(record, search_for, filter))
+    if (match_codEstacao(&record, search_for, filter))
       break;
   }
-
-  // Libera o registro auxiliar utilizado na leitura
-  data_record_destroy(&record);
 
   return found;
 }
@@ -75,54 +62,47 @@ bool search(FILE *f_bin, DataHeader *header, bool *search_for,
 // Imprime apenas os registros não removidos que passam pelo filtro
 void select_from_where() {
   FILE *f_bin = NULL;
-  DataHeader *header = NULL;
-  DataRecord *filter = NULL;
+  DataHeader header;
+  DataRecord filter;
 
   // Lê o nome do arquivo binário
   char bin_name[50];
   if (scanf("%s", bin_name) != 1) {
-    file_processing_failure_where(&f_bin, &header, &filter);
+    file_processing_failure_where(&f_bin);
     return;
   }
 
   // Abre o arquivo .bin para leitura e verifica consistência
   f_bin = open_binary_file(bin_name, "rb");
   if (f_bin == NULL) {
-    file_processing_failure_where(&f_bin, &header, &filter);
+    file_processing_failure_where(&f_bin);
     return;
   }
 
   // Cria a struct do cabeçalho lendo do arquivo binário
-  header = data_header_create();
-  if (header == NULL || !data_header_read(f_bin, header)) {
-    file_processing_failure_where(&f_bin, &header, &filter);
+  if (!data_header_read(f_bin, &header)) {
+    file_processing_failure_where(&f_bin);
     return;
   }
 
   // Lê o número de consultas a serem feitas
   int num_queries;
   if (scanf("%d", &num_queries) != 1) {
-    file_processing_failure_where(&f_bin, &header, &filter);
+    file_processing_failure_where(&f_bin);
     return;
   }
 
   // Itera sobre as consultas
   for (int i = 0; i < num_queries; i++) {
-    // Instancia o registro que serve como comparação para filtrar os dados
-    filter = data_record_create();
-    if (filter == NULL) {
-      file_processing_failure_where(&f_bin, &header, &filter);
-      return;
-    }
 
     // Array auxiliar para informar quais campos devem ser comparados com o
     // filtro
     bool search_for[PUBLIC_FIELDS];
 
     // Preenche a struct filter com os valores do filtro de pesquisa
-    filter_build(filter, search_for);
+    filter_build(&filter, search_for);
 
-    bool found = search(f_bin, header, search_for, filter);
+    bool found = search(f_bin, &header, search_for, &filter);
 
     // Se nenhum registro foi encontrado, o usuário é avisado
     if (!found) {
@@ -131,12 +111,8 @@ void select_from_where() {
 
     // Separa as consultas por uma linha em branco
     printf("\n");
-
-    // Destrói o filtro após usá-lo na iteração atual para evitar memory leak
-    data_record_destroy(&filter);
   }
 
   // Libera a memória final
   fclose(f_bin);
-  data_header_destroy(&header);
 }

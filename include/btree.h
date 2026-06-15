@@ -35,79 +35,30 @@ typedef struct {
   int Pr; // posição no arquivo de dados
 } BTreeKey;
 
-// Estrutura do cabeçalho da árvore (opaca)
-typedef struct btree_header_st BTreeHeader;
+// Estrutura do cabeçalho da árvore
+typedef struct {
+  char status; // '0' = inconsistente, '1' = consistente
+  int noRaiz;  // RRN do nó raiz. -1 se vazia
+  int topo;    // RRN do topo da pilha de removidos. -1 se vazia
+  int proxRRN; // Próximo RRN disponível para criação de nó
+  int nroNos;  // Número total de nós (páginas) na árvore
+} BTreeHeader;
 
-// Estrutura de uma página/nó da árvore (opaca)
-typedef struct btree_page_st BTreePage;
+// Estrutura de uma página/nó da árvore
+typedef struct {
+  char removido;                   // '1' = removido, '0' = ativo
+  int proximo;                     // RRN da próxima página removida
+  int tipoNo;                      // -1 = Folha, 0 = Raiz, 1 = Intermediário
+  int nroChaves;                   // Quantidade de chaves presentes
+  BTreeKey chaves[BTREE_MAX_KEYS]; // Chaves (C) e offsets (Pr)
+  int P[BTREE_MAX_CHILDREN];       // Ponteiros para subárvores (RRNs)
+} BTreePage;
 
-// ==================== Criação e destruição ====================
+// ==================== Leitura e Escrita em Disco ====================
 
-// Cria o cabeçalho da árvore
-BTreeHeader *btree_header_create(void);
-
-// Libera o cabeçalho da memória
-void btree_header_destroy(BTreeHeader **header);
-
-// Cria uma nova página vazia
-BTreePage *btree_page_create(void);
-
-// Libera uma página da memória
-void btree_page_destroy(BTreePage **page);
-
-// ==================== Cabeçalho ====================
-
-// Status do arquivo (consistente/inconsistente)
-void btree_header_set_status(BTreeHeader *header, char status);
-char btree_header_get_status(const BTreeHeader *header);
-
-// Raiz da árvore
-void btree_header_set_root_node(BTreeHeader *header, int root_node);
-int btree_header_get_root_node(const BTreeHeader *header);
-
-// Topo da pilha de páginas removidas
-void btree_header_set_top_of_stack(BTreeHeader *header, int top_of_stack);
-int btree_header_get_top_of_stack(const BTreeHeader *header);
-
-// Próximo RRN disponível
-void btree_header_set_next_rrn(BTreeHeader *header, int next_rrn);
-int btree_header_get_next_rrn(const BTreeHeader *header);
-
-// Quantidade de nós/páginas
-void btree_header_set_node_count(BTreeHeader *header, int node_count);
-int btree_header_get_node_count(const BTreeHeader *header);
-
-// Leitura e escrita do cabeçalho no arquivo
 bool btree_header_read(FILE *bin_file, BTreeHeader *header);
 bool btree_header_write(FILE *bin_file, const BTreeHeader *header);
 
-// ==================== Página ====================
-
-// Marca se a página foi removida
-void btree_page_set_removed(BTreePage *page, char removed);
-char btree_page_get_removed(const BTreePage *page);
-
-// Ponteiro para próxima posição na pilha de removidos
-void btree_page_set_next_in_stack(BTreePage *page, int next_rrn);
-int btree_page_get_next_in_stack(const BTreePage *page);
-
-// Tipo da página (folha, raiz ou intermediária)
-void btree_page_set_page_type(BTreePage *page, int type);
-int btree_page_get_page_type(const BTreePage *page);
-
-// Número de chaves armazenadas
-void btree_page_set_num_of_keys(BTreePage *page, int num_keys);
-int btree_page_get_num_of_keys(const BTreePage *page);
-
-// Acesso às chaves
-void btree_page_set_key(BTreePage *page, int index, BTreeKey key);
-BTreeKey btree_page_get_key(const BTreePage *page, int index);
-
-// Acesso aos filhos
-void btree_page_set_child_pointer(BTreePage *page, int index, int child_rrn);
-int btree_page_get_child_pointer(const BTreePage *page, int index);
-
-// Leitura e escrita de páginas no arquivo
 bool btree_page_read(FILE *bin_file, BTreePage *page, int rrn);
 bool btree_page_write(FILE *bin_file, const BTreePage *page, int rrn);
 

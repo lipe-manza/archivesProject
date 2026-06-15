@@ -5,40 +5,37 @@ int btree_search_key(FILE *bin_file, BTreeHeader *header, int search_key) {
     return BTREE_NOT_FOUND;
   }
 
-  int current_rrn = btree_header_get_root_node(header);
+  int current_rrn = header->noRaiz;
 
   // Se a raiz é -1, a árvore está vazia
   if (current_rrn == -1) {
     return BTREE_NOT_FOUND;
   }
 
-  // Alocamos a estrutura na Heap uma única vez para máxima eficiência
-  BTreePage *page = btree_page_create();
-  if (page == NULL) {
-    return BTREE_NOT_FOUND;
-  }
+  // Alocamos a estrutura na stack uma única vez para máxima eficiência
+  BTreePage page;
 
   int found_offset = BTREE_NOT_FOUND;
 
   // Busca iterativa: desce na árvore até achar a chave ou bater num filho nulo
   while (current_rrn != -1) {
     // Lê a página atual do disco
-    if (!btree_page_read(bin_file, page, current_rrn)) {
+    if (!btree_page_read(bin_file, &page, current_rrn)) {
       break; // Erro de leitura, aborta a busca
     }
 
     // Proteção contra corrupção lógica: não deveríamos visitar nós removidos
-    if (btree_page_get_removed(page) == '1') {
+    if (page.removido == '1') {
       break;
     }
 
-    int num_keys = btree_page_get_num_of_keys(page);
+    int num_keys = page.nroChaves;
     int i = 0;
 
     // Varre as chaves da página atual para encontrar o caminho ou a própria
     // chave
     while (i < num_keys) {
-      BTreeKey current = btree_page_get_key(page, i);
+      BTreeKey current = page.chaves[i];
 
       if (current.C == search_key) {
         // Achou a chave! Guarda o offset e interrompe o laço interno
@@ -59,11 +56,8 @@ int btree_search_key(FILE *bin_file, BTreeHeader *header, int search_key) {
     }
 
     // Atualiza o RRN para descer para a página filha correspondente
-    current_rrn = btree_page_get_child_pointer(page, i);
+    current_rrn = page.P[i];
   }
-
-  // Libera a memória da página antes de retornar o resultado
-  btree_page_destroy(&page);
 
   return found_offset;
 }

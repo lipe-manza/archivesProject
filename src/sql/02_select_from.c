@@ -7,19 +7,11 @@
 #include "../../include/sql_functions.h"
 
 // Função auxiliar para evitar repetição de código quando há falha no
-// processamento. Libera a memória alocada e fecha arquivos abertos antes de
-// exibir a mensagem de erro.
-void file_processing_failure_select(FILE **f_bin, DataHeader **header,
-                                    DataRecord **record) {
+// processamento. Fecha arquivos abertos antes de exibir a mensagem de erro.
+void file_processing_failure_select(FILE **f_bin) {
   if (f_bin != NULL && *f_bin != NULL) {
     fclose(*f_bin);
     *f_bin = NULL;
-  }
-  if (header != NULL) {
-    data_header_destroy(header);
-  }
-  if (record != NULL) {
-    data_record_destroy(record);
   }
 
   printf("Falha no processamento do arquivo.\n");
@@ -29,13 +21,13 @@ void file_processing_failure_select(FILE **f_bin, DataHeader **header,
 // logicamente removidos.
 void select_from() {
   FILE *f_bin = NULL;
-  DataHeader *header = NULL;
-  DataRecord *record = NULL;
+  DataHeader header;
+  DataRecord record;
 
   // Lê o nome do arquivo binário
   char bin_name[50];
   if (scanf("%s", bin_name) != 1) {
-    file_processing_failure_select(&f_bin, &header, &record);
+    file_processing_failure_select(&f_bin);
     return;
   }
 
@@ -43,21 +35,13 @@ void select_from() {
   // foi bem sucedida conferindo o status do arquivo
   f_bin = open_binary_file(bin_name, "rb");
   if (f_bin == NULL) {
-    file_processing_failure_select(&f_bin, &header, &record);
+    file_processing_failure_select(&f_bin);
     return;
   }
 
   // Instancia e cria a estrutura do cabeçalho lendo do arquivo binário
-  header = data_header_create();
-  if (header == NULL || !data_header_read(f_bin, header)) {
-    file_processing_failure_select(&f_bin, &header, &record);
-    return;
-  }
-
-  // Instancia o registro auxiliar que será usado iterativamente para ler o .bin
-  record = data_record_create();
-  if (record == NULL) {
-    file_processing_failure_select(&f_bin, &header, &record);
+  if (!data_header_read(f_bin, &header)) {
+    file_processing_failure_select(&f_bin);
     return;
   }
 
@@ -68,20 +52,20 @@ void select_from() {
   fseek(f_bin, HEADER_SIZE, SEEK_SET);
 
   // Itera por todos os registros previstos no arquivo binário
-  int total_records = data_header_get_proxRRN(header);
+  int total_records = header.proxRRN;
   for (int rrn = 0; rrn < total_records; rrn++) {
 
-    // Lê o registro do .bin para a estrutura do TAD
-    if (!data_record_read(f_bin, record)) {
-      file_processing_failure_select(&f_bin, &header, &record);
+    // Lê o registro do .bin para a estrutura
+    if (!data_record_read(f_bin, &record)) {
+      file_processing_failure_select(&f_bin);
       printf("Record read\n");
       return;
     }
 
     // O registro só é impresso se não estiver marcado como removido
-    if (data_record_get_removido(record) == '0') {
+    if (record.removido == '0') {
       found = true;
-      display_data_record(record);
+      display_data_record(&record);
     }
   }
 
@@ -91,8 +75,6 @@ void select_from() {
     printf("Registro inexistente.\n");
   }
 
-  // Fecha o arquivo e libera a memória alocada do heap
+  // Fecha o arquivo
   fclose(f_bin);
-  data_header_destroy(&header);
-  data_record_destroy(&record);
 }

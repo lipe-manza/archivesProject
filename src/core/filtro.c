@@ -23,30 +23,30 @@ int field_to_index(char *str) {
 void set_filter_field(DataRecord *filter, int field, char *field_val) {
   switch (field) {
   case COD_ESTACAO:
-    data_record_set_codEstacao(filter, safe_atoi(field_val, -1));
+    filter->codEstacao = safe_atoi(field_val, -1);
     break;
   case COD_LINHA:
-    data_record_set_codLinha(filter, safe_atoi(field_val, -1));
+    filter->codLinha = safe_atoi(field_val, -1);
     break;
   case COD_PROX_ESTACAO:
-    data_record_set_codProxEstacao(filter, safe_atoi(field_val, -1));
+    filter->codProxEstacao = safe_atoi(field_val, -1);
     break;
   case DIST_PROX_ESTACAO:
-    data_record_set_distProxEstacao(filter, safe_atoi(field_val, -1));
+    filter->distProxEstacao = safe_atoi(field_val, -1);
     break;
   case COD_LINHA_INTEGRA:
-    data_record_set_codLinhaIntegra(filter, safe_atoi(field_val, -1));
+    filter->codLinhaIntegra = safe_atoi(field_val, -1);
     break;
   case COD_EST_INTEGRA:
-    data_record_set_codEstIntegra(filter, safe_atoi(field_val, -1));
+    filter->codEstIntegra = safe_atoi(field_val, -1);
     break;
   case NOME_ESTACAO:
-    // O setter já calcula o tamanho da string
-    data_record_set_nomeEstacao(filter, field_val);
+    strcpy(filter->nomeEstacao, field_val);
+    filter->tamNomeEstacao = strlen(field_val);
     break;
   case NOME_LINHA:
-    // O setter já calcula o tamanho da string
-    data_record_set_nomeLinha(filter, field_val);
+    strcpy(filter->nomeLinha, field_val);
+    filter->tamNomeLinha = strlen(field_val);
     break;
   }
 }
@@ -97,41 +97,35 @@ bool match_filter(const DataRecord *reg, bool search[],
 
     switch (i) {
     case COD_ESTACAO:
-      if (data_record_get_codEstacao(reg) != data_record_get_codEstacao(filter))
+      if (reg->codEstacao != filter->codEstacao)
         return false;
       break;
     case COD_LINHA:
-      if (data_record_get_codLinha(reg) != data_record_get_codLinha(filter))
+      if (reg->codLinha != filter->codLinha)
         return false;
       break;
     case COD_PROX_ESTACAO:
-      if (data_record_get_codProxEstacao(reg) !=
-          data_record_get_codProxEstacao(filter))
+      if (reg->codProxEstacao != filter->codProxEstacao)
         return false;
       break;
     case DIST_PROX_ESTACAO:
-      if (data_record_get_distProxEstacao(reg) !=
-          data_record_get_distProxEstacao(filter))
+      if (reg->distProxEstacao != filter->distProxEstacao)
         return false;
       break;
     case COD_LINHA_INTEGRA:
-      if (data_record_get_codLinhaIntegra(reg) !=
-          data_record_get_codLinhaIntegra(filter))
+      if (reg->codLinhaIntegra != filter->codLinhaIntegra)
         return false;
       break;
     case COD_EST_INTEGRA:
-      if (data_record_get_codEstIntegra(reg) !=
-          data_record_get_codEstIntegra(filter))
+      if (reg->codEstIntegra != filter->codEstIntegra)
         return false;
       break;
     case NOME_ESTACAO:
-      if (strcmp(data_record_get_nomeEstacao(reg),
-                 data_record_get_nomeEstacao(filter)) != 0)
+      if (strcmp(reg->nomeEstacao, filter->nomeEstacao) != 0)
         return false;
       break;
     case NOME_LINHA:
-      if (strcmp(data_record_get_nomeLinha(reg),
-                 data_record_get_nomeLinha(filter)) != 0)
+      if (strcmp(reg->nomeLinha, filter->nomeLinha) != 0)
         return false;
       break;
     }
@@ -144,8 +138,7 @@ bool match_filter(const DataRecord *reg, bool search[],
 bool match_codEstacao(const DataRecord *reg, bool search[],
                       const DataRecord *filter) {
 
-  if (search[COD_ESTACAO] &&
-      data_record_get_codEstacao(reg) == data_record_get_codEstacao(filter))
+  if (search[COD_ESTACAO] && reg->codEstacao == filter->codEstacao)
     return true;
   return false;
 }

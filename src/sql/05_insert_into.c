@@ -7,20 +7,11 @@
 #include "../../include/sql_functions.h"
 #include "../../include/tools.h"
 
-// Função auxiliar para evitar repetição quando há falha no
-// processamento. Libera a memória alocada no heap e fecha o ponteiro do arquivo
-// binário.
-void file_processing_failure_insert(FILE **f_bin, DataHeader **header,
-                                    DataRecord **record) {
+// Usado no caso de falha durante o código
+void file_processing_failure_insert(FILE **f_bin) {
   if (f_bin != NULL && *f_bin != NULL) {
     fclose(*f_bin);
     *f_bin = NULL;
-  }
-  if (header != NULL) {
-    data_header_destroy(header);
-  }
-  if (record != NULL) {
-    data_record_destroy(record);
   }
 
   printf("Falha no processamento do arquivo.\n");
@@ -37,22 +28,22 @@ void insert_record(FILE *f_bin, DataHeader *header, DataRecord *record) {
   read_data_record_from_stdin(record);
 
   // Inicializa os campos removido e próximo
-  data_record_set_removido(record, '0');
-  data_record_set_proximo(record, -1);
+  record->removido = '0';
+  record->proximo = -1;
 
-  int current_topo = data_header_get_topo(header);
+  int current_topo = header->topo;
 
   // Se a pilha de removidos estiver vazia, insere o novo registro no final do
   // arquivo
   if (current_topo == -1) {
-    int current_rrn = data_header_get_proxRRN(header);
+    int current_rrn = header->proxRRN;
 
     // Vai para o offset do registro de RRN == proxRRN e escreve
     fseek(f_bin, HEADER_SIZE + (current_rrn * RECORD_SIZE), SEEK_SET);
     data_record_write(f_bin, record);
 
     // Atualiza o próximo RRN na estrutura em memória
-    data_header_set_proxRRN(header, current_rrn + 1);
+    header->proxRRN = current_rrn + 1;
   }
   // Se a pilha não estiver vazia, insere reaproveitando o espaço do RRN == topo
   else {
@@ -73,7 +64,7 @@ void insert_record(FILE *f_bin, DataHeader *header, DataRecord *record) {
     data_record_write(f_bin, record);
 
     // Atualiza o topo na estrutura do cabeçalho
-    data_header_set_topo(header, next_topo);
+    header->topo = next_topo;
   }
 }
 
@@ -81,13 +72,12 @@ void insert_record(FILE *f_bin, DataHeader *header, DataRecord *record) {
 //  atualiza o número de estações/pares no final.
 void insert_into() {
   FILE *f_bin = NULL;
-  DataHeader *header = NULL;
-  DataRecord *record = NULL;
+  DataHeader header;
 
   // Lê o nome do arquivo binário
   char bin_name[50];
   if (scanf("%s", bin_name) != 1) {
-    file_processing_failure_insert(&f_bin, &header, &record);
+    file_processing_failure_insert(&f_bin);
     return;
   }
 
@@ -95,49 +85,40 @@ void insert_into() {
   // insconsistente, e marca como insconsistente o status
   f_bin = open_binary_file(bin_name, "rb+");
   if (f_bin == NULL) {
-    file_processing_failure_insert(&f_bin, &header, &record);
+    file_processing_failure_insert(&f_bin);
     return; // A função de abertura já lida com prints e close
   }
 
   // Instancia e lê os dados do cabeçalho
-  header = data_header_create();
-  if (header == NULL || !data_header_read(f_bin, header)) {
-    file_processing_failure_insert(&f_bin, &header, &record);
+  if (!data_header_read(f_bin, &header)) {
+    file_processing_failure_insert(&f_bin);
     return;
   }
 
   // Lê o número de inserções a serem feitas
   int num_inserts;
   if (scanf("%d", &num_inserts) != 1) {
-    file_processing_failure_insert(&f_bin, &header, &record);
+    file_processing_failure_insert(&f_bin);
     return;
   }
 
   // Loop para ler os registros e processar cada um
   for (int i = 0; i < num_inserts; i++) {
-    // Aloca a struct de registro auxiliar para este loop
-    record = data_record_create();
-    if (record == NULL) {
-      file_processing_failure_insert(&f_bin, &header, &record);
-      return;
-    }
+    // Aloca a struct de registro auxiliar para este loop e zera a memória
+    DataRecord record = {0};
 
-    insert_record(f_bin, header, record);
-
-    // Limpa a memória para garantir que o próximo loop crie um TAD zerado
-    data_record_destroy(&record);
+    insert_record(f_bin, &header, &record);
   }
 
   // Atualiza o número de estações e pares diretamente no cabeçalho em memória
-  update_statistics(f_bin, header);
+  update_statistics(f_bin, &header);
 
   // Marca como consistente e aplica todas as mudanças no disco de uma só vez
-  data_header_set_status(header, '1');
-  data_header_write(f_bin, header);
+  header.status = '1';
+  data_header_write(f_bin, &header);
 
   // Fecha o arquivo binário e libera a memória
   fclose(f_bin);
-  data_header_destroy(&header);
 
   // Imprime o hash final conforme correção
   BinarioNaTela(bin_name);

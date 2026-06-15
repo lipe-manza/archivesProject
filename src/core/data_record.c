@@ -3,139 +3,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-struct data_record_st {
-  char removido;
-  int proximo;
-  int codEstacao;
-  int codLinha;
-  int codProxEstacao;
-  int distProxEstacao;
-  int codLinhaIntegra;
-  int codEstIntegra;
-  int tamNomeEstacao;
-  char nomeEstacao[51];
-  int tamNomeLinha;
-  char nomeLinha[51];
-};
-
-// --- Construtor ---
-
-DataRecord *data_record_create(void) {
-  DataRecord *new_record = (DataRecord *)malloc(sizeof(DataRecord));
-  if (new_record != NULL) {
-    new_record->removido = '0';
-    new_record->proximo = -1;
-    new_record->codEstacao = -1;
-    new_record->codLinha = -1;
-    new_record->codProxEstacao = -1;
-    new_record->distProxEstacao = -1;
-    new_record->codLinhaIntegra = -1;
-    new_record->codEstIntegra = -1;
-    new_record->tamNomeEstacao = 0;
-    memset(new_record->nomeEstacao, 0, 51);
-    new_record->tamNomeLinha = 0;
-    memset(new_record->nomeLinha, 0, 51);
-  }
-  return new_record;
-}
-
-// --- Destrutor ---
-
-void data_record_destroy(DataRecord **record) {
-  if (record != NULL && *record != NULL) {
-    free(*record);
-    *record = NULL;
-  }
-}
-
-// --- Getters e Setters ---
-
-void data_record_set_removido(DataRecord *record, char removido) {
-  if (record)
-    record->removido = removido;
-}
-char data_record_get_removido(const DataRecord *record) {
-  return record ? record->removido : '1';
-}
-
-void data_record_set_proximo(DataRecord *record, int proximo) {
-  if (record)
-    record->proximo = proximo;
-}
-int data_record_get_proximo(const DataRecord *record) {
-  return record ? record->proximo : -1;
-}
-
-void data_record_set_codEstacao(DataRecord *record, int codEstacao) {
-  if (record)
-    record->codEstacao = codEstacao;
-}
-int data_record_get_codEstacao(const DataRecord *record) {
-  return record ? record->codEstacao : -1;
-}
-
-void data_record_set_codLinha(DataRecord *record, int codLinha) {
-  if (record)
-    record->codLinha = codLinha;
-}
-int data_record_get_codLinha(const DataRecord *record) {
-  return record ? record->codLinha : -1;
-}
-
-void data_record_set_codProxEstacao(DataRecord *record, int codProxEstacao) {
-  if (record)
-    record->codProxEstacao = codProxEstacao;
-}
-int data_record_get_codProxEstacao(const DataRecord *record) {
-  return record ? record->codProxEstacao : -1;
-}
-
-void data_record_set_distProxEstacao(DataRecord *record, int distProxEstacao) {
-  if (record)
-    record->distProxEstacao = distProxEstacao;
-}
-int data_record_get_distProxEstacao(const DataRecord *record) {
-  return record ? record->distProxEstacao : -1;
-}
-
-void data_record_set_codLinhaIntegra(DataRecord *record, int codLinhaIntegra) {
-  if (record)
-    record->codLinhaIntegra = codLinhaIntegra;
-}
-int data_record_get_codLinhaIntegra(const DataRecord *record) {
-  return record ? record->codLinhaIntegra : -1;
-}
-
-void data_record_set_codEstIntegra(DataRecord *record, int codEstIntegra) {
-  if (record)
-    record->codEstIntegra = codEstIntegra;
-}
-int data_record_get_codEstIntegra(const DataRecord *record) {
-  return record ? record->codEstIntegra : -1;
-}
-
-void data_record_set_nomeEstacao(DataRecord *record, const char *nome) {
-  if (record != NULL && nome != NULL) {
-    strncpy(record->nomeEstacao, nome, 50);
-    record->nomeEstacao[50] = '\0';
-    record->tamNomeEstacao = strlen(record->nomeEstacao);
-  }
-}
-const char *data_record_get_nomeEstacao(const DataRecord *record) {
-  return record ? record->nomeEstacao : NULL;
-}
-
-void data_record_set_nomeLinha(DataRecord *record, const char *nome) {
-  if (record != NULL && nome != NULL) {
-    strncpy(record->nomeLinha, nome, 50);
-    record->nomeLinha[50] = '\0';
-    record->tamNomeLinha = strlen(record->nomeLinha);
-  }
-}
-const char *data_record_get_nomeLinha(const DataRecord *record) {
-  return record ? record->nomeLinha : NULL;
-}
-
 // --- I/O em Disco ---
 
 bool data_record_read(FILE *bin_file, DataRecord *record) {
@@ -241,40 +108,46 @@ bool data_record_update(FILE *bin_file, int RRN, bool fields_to_update[],
   if (bin_file == NULL || updated_data == NULL)
     return false;
 
-  DataRecord *current_record = data_record_create();
+  DataRecord current_record;
+  memset(&current_record, 0, sizeof(DataRecord));
 
   // Posiciona o ponteiro e lê o registro atual
   fseek(bin_file, HEADER_SIZE + (RRN * RECORD_SIZE), SEEK_SET);
-  if (!data_record_read(bin_file, current_record)) {
-    data_record_destroy(&current_record);
+  if (!data_record_read(bin_file, &current_record)) {
     return false;
   }
 
-  // Aplica as atualizações usando os setters
+  // Aplica as atualizações
   if (fields_to_update[0])
-    data_record_set_codEstacao(current_record, updated_data->codEstacao);
+    current_record.codEstacao = updated_data->codEstacao;
   if (fields_to_update[1])
-    data_record_set_codLinha(current_record, updated_data->codLinha);
+    current_record.codLinha = updated_data->codLinha;
   if (fields_to_update[2])
-    data_record_set_codProxEstacao(current_record,
-                                   updated_data->codProxEstacao);
+    current_record.codProxEstacao = updated_data->codProxEstacao;
   if (fields_to_update[3])
-    data_record_set_distProxEstacao(current_record,
-                                    updated_data->distProxEstacao);
+    current_record.distProxEstacao = updated_data->distProxEstacao;
   if (fields_to_update[4])
-    data_record_set_codLinhaIntegra(current_record,
-                                    updated_data->codLinhaIntegra);
+    current_record.codLinhaIntegra = updated_data->codLinhaIntegra;
   if (fields_to_update[5])
-    data_record_set_codEstIntegra(current_record, updated_data->codEstIntegra);
-  if (fields_to_update[6])
-    data_record_set_nomeEstacao(current_record, updated_data->nomeEstacao);
-  if (fields_to_update[7])
-    data_record_set_nomeLinha(current_record, updated_data->nomeLinha);
+    current_record.codEstIntegra = updated_data->codEstIntegra;
+  if (fields_to_update[6]) {
+    if (updated_data->nomeEstacao != NULL) {
+      strncpy(current_record.nomeEstacao, updated_data->nomeEstacao, 50);
+      current_record.nomeEstacao[50] = '\0';
+      current_record.tamNomeEstacao = strlen(current_record.nomeEstacao);
+    }
+  }
+  if (fields_to_update[7]) {
+    if (updated_data->nomeLinha != NULL) {
+      strncpy(current_record.nomeLinha, updated_data->nomeLinha, 50);
+      current_record.nomeLinha[50] = '\0';
+      current_record.tamNomeLinha = strlen(current_record.nomeLinha);
+    }
+  }
 
   // Volta o ponteiro e sobrescreve
   fseek(bin_file, HEADER_SIZE + (RRN * RECORD_SIZE), SEEK_SET);
-  bool status = data_record_write(bin_file, current_record);
+  bool status = data_record_write(bin_file, &current_record);
 
-  data_record_destroy(&current_record);
   return status;
 }
