@@ -127,6 +127,5 @@ void delete_from_where() {
   // Fecha o arquivo binário com segurança
   fclose(f_bin);
 
-  // Imprime o binário na tela conforme especificado no trabalho prático
   BinarioNaTela(bin_name);
 }

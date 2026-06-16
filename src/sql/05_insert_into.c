@@ -120,6 +120,5 @@ void insert_into() {
   // Fecha o arquivo binário e libera a memória
   fclose(f_bin);
 
-  // Imprime o hash final conforme correção
   BinarioNaTela(bin_name);
 }

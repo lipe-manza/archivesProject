@@ -11,8 +11,8 @@
 
 // Função auxiliar para fechar arquivos e limpar a memória de forma
 // segura.
-static void
-file_processing_failure_select_bt(FILE **f_entrada, FILE **f_arvore_b) {
+static void file_processing_failure_select_bt(FILE **f_entrada,
+                                              FILE **f_arvore_b) {
   if (f_entrada && *f_entrada) {
     fclose(*f_entrada);
     *f_entrada = NULL;
@@ -51,12 +51,11 @@ void select_from_where_ab() {
     return;
   }
 
-  // Instancia as structs necessárias na stack
+  // Instancia as structs de cabeçalho
   DataHeader cab_dados = {0};
   BTreeHeader cab_btree = {0};
-  DataRecord registro = {0};
 
-  // Le os cabecalhos dos arquivos
+  // Lê os cabeçalhos dos arquivos
   if (!data_header_read(f_entrada, &cab_dados) ||
       !btree_header_read(f_arvore_b, &cab_btree)) {
     file_processing_failure_select_bt(&f_entrada, &f_arvore_b);
@@ -84,6 +83,8 @@ void select_from_where_ab() {
     // filtro.h) foi solicitado
     // Se sim faz busca binária pela B-tree para achar o byteoffset do registro
     if (search_for[COD_ESTACAO]) {
+      DataRecord registro = {0};
+
       int search_key = filter.codEstacao;
 
       // Busca o byte offset no índice
@@ -99,36 +100,25 @@ void select_from_where_ab() {
             // Confirma se ele bate com os outros campos usando o filter
             if (match_filter(&registro, search_for, &filter)) {
               display_data_record(&registro); // Printa  o registro
-              printf("\n");
               encontrou = true;
             }
           }
         }
       }
     }
-    // Quando a chave primária não foi informada na consulta
-    // Buca sequencialmente pelo registro de dados (data_record)
+    // Quando a chave primária não foi informada na consulta busca
+    // sequencialmente pelo registro de dados (data_record) usando a mesma
+    // função de (2)
     else {
-      int prox_rrn = cab_dados.proxRRN;
-      fseek(f_entrada, DATA_HEADER_SIZE, SEEK_SET);
-
-      for (int j = 0; j < prox_rrn; j++) {
-        if (data_record_read(f_entrada, &registro)) {
-          if (registro.removido == '0') {
-            if (match_filter(&registro, search_for, &filter)) {
-              display_data_record(&registro);
-              encontrou = true;
-            }
-          }
-        }
-      }
-      printf("\n");
+      encontrou = search(f_entrada, &cab_dados, search_for, &filter);
     }
 
     if (!encontrou) {
       printf("Registro inexistente.\n");
-      printf("\n");
     }
+
+    // Pula uma linha entre as consultas
+    printf("\n");
   }
 
   // Fecha arquivos e limpa a memória

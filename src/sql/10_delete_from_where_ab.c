@@ -54,7 +54,7 @@ void delete_from_where_ab() {
   if (scanf("%s %s %d", input_filename, btree_filename, &n_queries) != 3)
     return;
 
-  // Abre os arquivos binários para escrita e leitura, confere a consistencia e
+  // Abre os arquivos binários para escrita e leitura, confere a consistência e
   // marca o status como inconsistentes
   FILE *f_data = open_binary_file(input_filename, "rb+");
   FILE *f_btree = open_binary_file(btree_filename, "rb+");
@@ -65,8 +65,8 @@ void delete_from_where_ab() {
     return;
   }
 
-  // Instancia as structs necessárias para as leituras dos cabeçalhos, registros e
-  // nós dos arquivos binários na stack
+  // Instancia as structs necessárias para as leituras dos cabeçalhos, registros
+  // e nós dos arquivos binários na stack
   DataHeader cab_dados = {0};
   BTreeHeader cab_btree = {0};
   DataRecord filter = {0};
@@ -93,8 +93,7 @@ void delete_from_where_ab() {
         int rrn = (offset - DATA_HEADER_SIZE) / DATA_RECORD_SIZE;
         fseek(f_data, offset, SEEK_SET);
 
-        if (data_record_read(f_data, &registro) &&
-            registro.removido == '0') {
+        if (data_record_read(f_data, &registro) && registro.removido == '0') {
           if (match_filter(&registro, search_for, &filter)) {
             // Deleção dupla (Dados + Índice)
             perform_data_deletion(f_data, &cab_dados, &registro, rrn);
@@ -111,8 +110,7 @@ void delete_from_where_ab() {
         fseek(f_data, DATA_HEADER_SIZE + (long)(rrn * DATA_RECORD_SIZE),
               SEEK_SET);
 
-        if (data_record_read(f_data, &registro) &&
-            registro.removido == '0') {
+        if (data_record_read(f_data, &registro) && registro.removido == '0') {
           if (match_filter(&registro, search_for, &filter)) {
             // Salva a chave antes de deletar do registro, pois precisaremos
             // dela para encontrar o nó na Árvore-B

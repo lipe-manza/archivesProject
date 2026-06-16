@@ -58,7 +58,6 @@ void select_from() {
     // Lê o registro do .bin para a estrutura
     if (!data_record_read(f_bin, &record)) {
       file_processing_failure_select(&f_bin);
-      printf("Record read\n");
       return;
     }
 
@@ -69,8 +68,7 @@ void select_from() {
     }
   }
 
-  // Se nenhum registro for encontrado (arquivo apenas com removidos), o usuário
-  // é avisado
+  // Se nenhum registro for encontrado, o usuário é avisado
   if (!found) {
     printf("Registro inexistente.\n");
   }

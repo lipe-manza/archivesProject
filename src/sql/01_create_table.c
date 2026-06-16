@@ -197,7 +197,5 @@ void create_table() {
   free_hash_estacao(hash_est);
   free_hash_par(hash_par);
 
-  // Exibe o arquivo binário na tela utilizando o código fornecido pelo
-  // run.codes
   BinarioNaTela(bin_name);
 }

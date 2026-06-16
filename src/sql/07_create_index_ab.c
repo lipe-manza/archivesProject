@@ -102,6 +102,5 @@ void create_index() {
   fclose(f_entrada);
   fclose(f_arvore_b);
 
-  // Validação final exigida pela especificação
   BinarioNaTela(nome_arvore_b);
 }

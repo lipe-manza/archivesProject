@@ -10,7 +10,7 @@ FILE *open_binary_file(char *bin_name, char *mode) {
   // Tenta abrir o arquivo binário com o modo especificado
   FILE *f_bin = fopen(bin_name, mode);
 
-  // Verifica se o arquivo pode ser aberto
+  // Verifica se o arquivo pôde ser aberto
   if (f_bin == NULL) {
     return NULL;
   }
@@ -27,7 +27,7 @@ FILE *open_binary_file(char *bin_name, char *mode) {
     }
   }
 
-  // Se nao for abrir, apenas para leitura, marca como inconsistente
+  // Se o arquivo for aberto apenas para leitura, não muda o status
   if (strcmp(mode, "rb") != 0) {
     status = '0';
     fseek(f_bin, 0, SEEK_SET);
@@ -39,22 +39,6 @@ FILE *open_binary_file(char *bin_name, char *mode) {
   fseek(f_bin, 0, SEEK_SET);
   return f_bin;
 }
-
-/* void mark_file_inconsistent(FILE *f_bin) { */
-/*   if (f_bin == NULL) */
-/*     return; */
-
-/*   long pos = ftell(f_bin); */
-/*   char status = '0'; */
-
-/*   // Volta para o byte 0 antes de escrever a flag de status inconsistente */
-/*   fseek(f_bin, 0, SEEK_SET); */
-/*   fwrite(&status, sizeof(char), 1, f_bin); */
-/*   fflush(f_bin); */
-
-/*   // Retorna para a posição original onde a função foi chamada */
-/*   fseek(f_bin, pos, SEEK_SET); */
-/* } */
 
 void display_data_record(const DataRecord *record) {
   if (record == NULL)

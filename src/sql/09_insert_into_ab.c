@@ -132,7 +132,6 @@ void insert_into_ab() {
   fclose(f_btree);
   f_btree = NULL;
 
-  // Chamadas obrigatórias para o avaliador automático do run.codes
   BinarioNaTela(input_filename);
   BinarioNaTela(btree_filename);
 }

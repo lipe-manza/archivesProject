@@ -115,6 +115,5 @@ void update_set_where() {
   // Fecha o arquivo e libera a memória restante
   fclose(f_bin);
 
-  // Imprime o hash final conforme correção
   BinarioNaTela(bin_name);
 }
