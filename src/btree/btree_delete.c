@@ -68,12 +68,10 @@ static int handle_underflow(FILE *bin_file, BTreeHeader *header,
 
   int child_rrn = parent->P[child_idx];
 
-  int left_sibling_rrn =
-      (child_idx > 0) ? parent->P[child_idx - 1] : -1;
+  int left_sibling_rrn = (child_idx > 0) ? parent->P[child_idx - 1] : -1;
 
   int right_sibling_rrn =
-      (child_idx < parent->nroChaves)
-          ? parent->P[child_idx + 1] : -1;
+      (child_idx < parent->nroChaves) ? parent->P[child_idx + 1] : -1;
 
   BTreePage child;
   BTreePage sibling;
@@ -172,9 +170,7 @@ static int handle_underflow(FILE *bin_file, BTreeHeader *header,
     push_removed_page(bin_file, header, child_rrn, &child);
     btree_page_write(bin_file, &sibling, left_sibling_rrn);
 
-    return (parent->nroChaves < BTREE_MIN_KEYS)
-               ? DELETE_UNDERFLOW
-               : DELETE_OK;
+    return (parent->nroChaves < BTREE_MIN_KEYS) ? DELETE_UNDERFLOW : DELETE_OK;
   }
 
   // ==================== Caso 4: Merge com irmão da direita
@@ -203,9 +199,7 @@ static int handle_underflow(FILE *bin_file, BTreeHeader *header,
     push_removed_page(bin_file, header, right_sibling_rrn, &sibling);
     btree_page_write(bin_file, &child, child_rrn);
 
-    return (parent->nroChaves < BTREE_MIN_KEYS)
-               ? DELETE_UNDERFLOW
-               : DELETE_OK;
+    return (parent->nroChaves < BTREE_MIN_KEYS) ? DELETE_UNDERFLOW : DELETE_OK;
   }
 
   return DELETE_OK;
@@ -213,7 +207,7 @@ static int handle_underflow(FILE *bin_file, BTreeHeader *header,
 
 // ==================== Lógica Recursiva Principal ====================
 
-// Função recursiva que desce a árvore procurando a chave e aplicando remoções
+// Função recursiva que desce a árvore procurando a chave e fazendo remoções
 static int delete_recursive(FILE *bin_file, BTreeHeader *header,
                             int current_rrn, int search_key) {
 
@@ -249,9 +243,8 @@ static int delete_recursive(FILE *bin_file, BTreeHeader *header,
       remove_key_from_page(&page, pos);
       btree_page_write(bin_file, &page, current_rrn);
 
-      int ret = (page.nroChaves < BTREE_MIN_KEYS)
-                    ? DELETE_UNDERFLOW
-                    : DELETE_OK;
+      int ret =
+          (page.nroChaves < BTREE_MIN_KEYS) ? DELETE_UNDERFLOW : DELETE_OK;
 
       return ret;
 
@@ -259,23 +252,19 @@ static int delete_recursive(FILE *bin_file, BTreeHeader *header,
       // Caso 2: nó interno, troca pelo sucessor
       BTreeKey successor;
 
-      find_successor(bin_file, page.P[pos + 1],
-                     &successor);
+      find_successor(bin_file, page.P[pos + 1], &successor);
 
       page.chaves[pos] = successor;
       btree_page_write(bin_file, &page, current_rrn);
 
-      status = delete_recursive(bin_file, header,
-                                page.P[pos + 1],
-                                successor.C);
+      status = delete_recursive(bin_file, header, page.P[pos + 1], successor.C);
 
-      pos = pos + 1;
+      pos++;
     }
 
   } else {
     // Desce para o filho correto
-    status = delete_recursive(
-        bin_file, header, page.P[pos], search_key);
+    status = delete_recursive(bin_file, header, page.P[pos], search_key);
   }
 
   // Trata underflow vindo do nível inferior
