@@ -8,7 +8,7 @@
 #include "../../include/sql_functions.h"
 
 // Função auxiliar para evitar repetição quando há falha no processamento.
-// Libera a memória de arquivos, cabeçalhos e registros de filtro alocados.
+// Fecha os arquivos
 void file_processing_failure_where(FILE **f_bin) {
   if (f_bin != NULL && *f_bin != NULL) {
     fclose(*f_bin);

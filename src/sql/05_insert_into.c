@@ -104,7 +104,7 @@ void insert_into() {
 
   // Loop para ler os registros e processar cada um
   for (int i = 0; i < num_inserts; i++) {
-    // Aloca a struct de registro auxiliar para este loop e zera a memória
+    // Inicializa a struct auxiliar
     DataRecord record = {0};
 
     insert_record(f_bin, &header, &record);

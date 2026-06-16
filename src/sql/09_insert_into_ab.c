@@ -55,7 +55,7 @@ void insert_into_ab() {
   BTreeHeader btree_header = {0};
   DataRecord new_record = {0};
 
-  // Valida as leituras dos cabeçalhos
+  // Valida as leituras dos cabeçalhos e pega os cabecalhos de cada arquivo
   if (!data_header_read(f_data, &data_header) ||
       !btree_header_read(f_btree, &btree_header)) {
     file_processing_failure_insert_bt(&f_data, &f_btree);
@@ -75,6 +75,7 @@ void insert_into_ab() {
     new_record.removido = '0';
     new_record.proximo = -1;
 
+    // Verifica se a chave já existe usando a função de busca na B-tree
     int target_key = new_record.codEstacao;
     if (btree_search_key(f_btree, &btree_header, target_key) !=
         BTREE_NOT_FOUND) {

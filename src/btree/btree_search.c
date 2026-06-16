@@ -12,7 +12,7 @@ int btree_search_key(FILE *bin_file, BTreeHeader *header, int search_key) {
     return BTREE_NOT_FOUND;
   }
 
-  // Alocamos a estrutura na stack uma única vez para máxima eficiência
+  // Inicializa a página
   BTreePage page;
 
   int found_offset = BTREE_NOT_FOUND;
