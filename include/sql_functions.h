@@ -17,6 +17,10 @@ void create_index();
 void select_from_where_ab();
 void delete_from_where_ab();
 void insert_into_ab();
+void nested_loop_join();
+void single_loop_join();
+void sort_file();
+void merge_sort_join();
 
 // Funções auxiliares
 

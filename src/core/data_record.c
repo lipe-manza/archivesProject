@@ -131,18 +131,14 @@ bool data_record_update(FILE *bin_file, int RRN, bool fields_to_update[],
   if (fields_to_update[5])
     current_record.codEstIntegra = updated_data->codEstIntegra;
   if (fields_to_update[6]) {
-    if (updated_data->nomeEstacao != NULL) {
-      strncpy(current_record.nomeEstacao, updated_data->nomeEstacao, 50);
-      current_record.nomeEstacao[50] = '\0';
-      current_record.tamNomeEstacao = strlen(current_record.nomeEstacao);
-    }
+    strncpy(current_record.nomeEstacao, updated_data->nomeEstacao, 50);
+    current_record.nomeEstacao[50] = '\0';
+    current_record.tamNomeEstacao = strlen(current_record.nomeEstacao);
   }
   if (fields_to_update[7]) {
-    if (updated_data->nomeLinha != NULL) {
-      strncpy(current_record.nomeLinha, updated_data->nomeLinha, 50);
-      current_record.nomeLinha[50] = '\0';
-      current_record.tamNomeLinha = strlen(current_record.nomeLinha);
-    }
+    strncpy(current_record.nomeLinha, updated_data->nomeLinha, 50);
+    current_record.nomeLinha[50] = '\0';
+    current_record.tamNomeLinha = strlen(current_record.nomeLinha);
   }
 
   // Volta o ponteiro e sobrescreve
