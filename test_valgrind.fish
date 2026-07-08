@@ -1,6 +1,5 @@
 #!/usr/bin/env fish
 
-# Compila o projeto com símbolos de debug (-g)
 echo "🔨 Compilando o projeto com símbolos de debug..."
 make debug
 if test $status -ne 0
@@ -8,75 +7,75 @@ if test $status -ne 0
     exit 1
 end
 
-# Define os caminhos
-set TEST_DIR "./tests"
-set ENTRADA_DIR "./arq_entrada"
-set EXECUTABLE "./programTrab"
+echo "🚀 Iniciando os testes com Valgrind..."
+echo "----------------------------------------"
 
-# Contador de erros, vazamentos e sucessos
+# Limpa resquícios
+find . -maxdepth 1 -name "*.bin" -delete 2>/dev/null
+rm -f *.txt *.valgrind 2>/dev/null
+
+# Copia entradas
+cp arq_entrada/*.bin ./ 2>/dev/null
+
 set passed 0
 set leaks 0
 set failed 0
 
-echo "🚀 Iniciando os testes com Valgrind..."
-echo "----------------------------------------"
+# Função auxiliar para rodar valgrind
+function run_valgrind -d "Roda teste com valgrind"
+    set name $argv[1]
+    set input_str $argv[2]
+    set log_file "$name.valgrind"
 
-# Remove resquícios de arquivos .bin antes de iniciar sem causar erros se não existirem
-find . -maxdepth 1 -name "*.bin" -delete
+    echo -n "Executando Valgrind no teste: $name ... "
 
-# Busca por todos os arquivos .in no diretório de testes
-for in_file in (ls -v $TEST_DIR/*.in)
-    # Extrai o nome base do caso de teste
-    set base_name (string replace -r '\.in$' '' $in_file)
-    set out_got "$base_name.got"
-    set valgrind_log "$base_name.valgrind"
-
-    echo -n "Running valgrind (case: "(basename $base_name)") ... "
-
-    # 1. SETUP: Copia os arquivos originais do arq_entrada para a raiz
-    cp $ENTRADA_DIR/* ./ 2>/dev/null
-
-    # 2. EXECUÇÃO: Executa o programa com Valgrind salvando logs
-    valgrind --leak-check=full \
-             --show-leak-kinds=all \
-             --track-origins=yes \
-             --error-exitcode=99 \
-             --log-file=$valgrind_log \
-             $EXECUTABLE < $in_file > $out_got
+    echo $input_str | valgrind --leak-check=full \
+                               --show-leak-kinds=all \
+                               --track-origins=yes \
+                               --error-exitcode=99 \
+                               --log-file=$log_file \
+                               ./programTrab > /dev/null
 
     set valgrind_status $status
 
-    # 3. VERIFICAÇÃO DE VAZAMENTO / ERRO DE MEMÓRIA
     if test $valgrind_status -eq 99
         echo "❌ LEAK/ERROR DETECTED"
-        set leaks (math $leaks + 1)
-        echo "--- Detalhes do Valgrind: ---"
-        if test -f $valgrind_log
-            cat $valgrind_log
-        else
-            echo "Erro: Log do Valgrind não pôde ser gerado."
-        end
-        echo "-----------------------------"
+        set -g leaks (math $leaks + 1)
+        cat $log_file
     else if test $valgrind_status -ne 0
         echo "💥 CRASH / EXECUTION ERROR (Exit code: $valgrind_status)"
-        set failed (math $failed + 1)
-        echo "--- Detalhes do Valgrind: ---"
-        if test -f $valgrind_log
-            cat $valgrind_log
-        else
-            echo "Erro: Log do Valgrind não pôde ser gerado."
-        end
-        echo "-----------------------------"
+        set -g failed (math $failed + 1)
+        cat $log_file
     else
         echo "✅ OK"
-        set passed (math $passed + 1)
-        # Remove o log temporário e saída do teste se não houve erro
-        rm -f $valgrind_log $out_got
+        set -g passed (math $passed + 1)
+        rm -f $log_file
     end
-
-    # 4. TEARDOWN: Limpa todos os arquivos binários
-    find . -maxdepth 1 -name "*.bin" -delete
 end
+
+run_valgrind "Join_11" "11
+estacoes1.bin codProxEstacao
+estacoes2.bin codEstacao"
+
+run_valgrind "Join_12" "12
+estacoes1.bin codProxEstacao
+estacoes2.bin codEstacao
+indice_estacoes1.bin"
+
+run_valgrind "Sort_13_cod" "13
+estacoes1.bin codEstacao estacoesOrdCod_test.bin"
+
+run_valgrind "Sort_13_prox" "13
+estacoes1.bin codProxEstacao estacoesOrdProx_test.bin"
+
+run_valgrind "Join_14" "14
+estacoes1.bin codProxEstacao
+estacoes2.bin codEstacao"
+
+# Limpeza
+find . -maxdepth 1 -name "*.bin" -delete 2>/dev/null
+find . -maxdepth 1 -name "*.txt" -delete 2>/dev/null
+find . -maxdepth 1 -name "*.valgrind" -delete 2>/dev/null
 
 echo "----------------------------------------"
 echo "📊 Resumo dos Testes com Valgrind:"

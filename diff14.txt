@@ -1,0 +1,47 @@
+diff --git a/src/sql/14_merge_sort_join.c b/src/sql/14_merge_sort_join.c
+index fae040e..7578bc2 100644
+--- a/src/sql/14_merge_sort_join.c
++++ b/src/sql/14_merge_sort_join.c
+@@ -38,9 +38,9 @@ static int cmp_codProxEstacao_merge(const void *a, const void *b) {
+ 
+   // Valores nulos vão para o final
+   if (r1->codProxEstacao == -1 && r2->codProxEstacao != -1)
+-    return 1;
+-  if (r2->codProxEstacao == -1 && r1->codProxEstacao != -1)
+     return -1;
++  if (r2->codProxEstacao == -1 && r1->codProxEstacao != -1)
++    return 1;
+ 
+   return r1->codProxEstacao - r2->codProxEstacao;
+ }
+@@ -51,9 +51,9 @@ static int cmp_codEstacao_merge(const void *a, const void *b) {
+   const DataRecord *r2 = (const DataRecord *)b;
+ 
+   if (r1->codEstacao == -1 && r2->codEstacao != -1)
+-    return 1;
+-  if (r2->codEstacao == -1 && r1->codEstacao != -1)
+     return -1;
++  if (r2->codEstacao == -1 && r1->codEstacao != -1)
++    return 1;
+ 
+   return r1->codEstacao - r2->codEstacao;
+ }
+@@ -159,10 +159,14 @@ void merge_sort_join() {
+   // Intercala (Merge) simultâneo buscando a condição: estacao1.codProxEstacao
+   // == estacao2.codEstacao
+   while (i < count1 && j < count2) {
+-    // Para no primeiro valor nulo detectado, já que as funções os jogam para o
+-    // final
+-    if (registros1[i].codProxEstacao == -1 || registros2[j].codEstacao == -1) {
+-      break;
++    // Pula os valores nulos se eles vierem no começo
++    if (registros1[i].codProxEstacao == -1) {
++      i++;
++      continue;
++    }
++    if (registros2[j].codEstacao == -1) {
++      j++;
++      continue;
+     }
+ 
+     if (registros1[i].codProxEstacao < registros2[j].codEstacao) {

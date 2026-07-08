@@ -8,7 +8,7 @@
 #include "../../include/sql_functions.h"
 
 // Função auxiliar para evitar repetição de código quando há falha no
-// processamento. Fecha arquivos abertos antes de exibir a mensagem de erro.
+// processamento. Fecha os arquivos abertos e imprime a mensagem de erro.
 void file_processing_failure_join(FILE **f_bin1, FILE **f_bin2) {
   if (f_bin1 != NULL && *f_bin1 != NULL) {
     fclose(*f_bin1);
@@ -22,9 +22,9 @@ void file_processing_failure_join(FILE **f_bin1, FILE **f_bin2) {
   printf("Falha no processamento do arquivo.\n");
 }
 
-// Realiza a junção de dois arquivos de dados por meio de dois laços aninhados
-// (Nested Loop Join). A condição de junção é a igualdade entre codProxEstacao
-// do primeiro arquivo e codEstacao do segundo.
+// Realiza a junção de dois arquivos de dados através de dois laços aninhados
+// A condição de junção é que o codProxEstacao do primeiro arquivo deve ser
+// igual ao codEstacao do segundo
 void nested_loop_join() {
   FILE *f_bin1 = NULL;
   FILE *f_bin2 = NULL;
@@ -34,7 +34,7 @@ void nested_loop_join() {
   char bin_name1[50], field1[50];
   char bin_name2[50], field2[50];
 
-  // Lê os nomes dos arquivos e os campos que serão utilizados para a junção
+  // Lê os nomes dos arquivos e dos campos que serão utilizados para a junção
   if (scanf("%s %s", bin_name1, field1) != 2) {
     file_processing_failure_join(&f_bin1, &f_bin2);
     return;
@@ -59,7 +59,7 @@ void nested_loop_join() {
     return;
   }
 
-  // Valida o status lógico dos arquivos por meio de seus cabeçalhos
+  // Lê os cabeçalhos dos arquivos
   if (!data_header_read(f_bin1, &header1)) {
     file_processing_failure_join(&f_bin1, &f_bin2);
     return;
@@ -72,16 +72,14 @@ void nested_loop_join() {
 
   bool found = false;
 
-  // Obtém o total de registros de cada arquivo para delimitar os laços
+  // Guarda a quantidade de registros de cada arquivo para percorrê-los
   int total_records1 = header1.proxRRN;
   int total_records2 = header2.proxRRN;
 
-  // Posiciona o ponteiro de leitura no início dos registros (após o cabeçalho)
-  fseek(f_bin1, HEADER_SIZE, SEEK_SET);
+  // Itera sobre todos os registros do primeiro arquivo
+  for (int RRN1 = 0; RRN1 < total_records1; RRN1++) {
 
-  // Itera sobre todos os registros do primeiro arquivo (laço externo)
-  for (int rrn1 = 0; rrn1 < total_records1; rrn1++) {
-
+    // Lê os registros do primeiro arquivo
     if (!data_record_read(f_bin1, &record1)) {
       file_processing_failure_join(&f_bin1, &f_bin2);
       return;
@@ -92,12 +90,14 @@ void nested_loop_join() {
       continue;
     }
 
-    // Posiciona o ponteiro de leitura no início dos registros (após o cabeçalho) do arquivo 2
+    // Posiciona o ponteiro de leitura no início dos registros (após o
+    // cabeçalho) do arquivo 2
     fseek(f_bin2, HEADER_SIZE, SEEK_SET);
 
-    // Itera sobre todos os registros do segundo arquivo (laço interno)
-    for (int rrn2 = 0; rrn2 < total_records2; rrn2++) {
+    // Itera sobre todos os registros do segundo arquivo
+    for (int RRN2 = 0; RRN2 < total_records2; RRN2++) {
 
+      // Lê os registros do segundo arquivo
       if (!data_record_read(f_bin2, &record2)) {
         file_processing_failure_join(&f_bin1, &f_bin2);
         return;
@@ -109,37 +109,23 @@ void nested_loop_join() {
       }
 
       // Verifica se encontrou a chave única codEstacao no segundo arquivo
-      if (record1.codProxEstacao != -1 && record2.codEstacao != -1 &&
-          record1.codProxEstacao == record2.codEstacao) {
+      if (record1.codProxEstacao == record2.codEstacao) {
 
         found = true;
 
-        // Imprime os dados combinados substituindo valores ausentes pela string
-        // NULO
-        if (record1.codEstacao == -1)
-          printf("NULO ");
-        else
-          printf("%d ", record1.codEstacao);
+        // Imprime os dados unidos
+        printf("%d ", record1.codEstacao);
 
-        if (strlen(record1.nomeEstacao) == 0)
-          printf("NULO ");
-        else
-          printf("%s ", record1.nomeEstacao);
+        printf("%s ", record1.nomeEstacao);
 
         if (strlen(record1.nomeLinha) == 0)
           printf("NULO ");
         else
           printf("%s ", record1.nomeLinha);
 
-        if (record1.codProxEstacao == -1)
-          printf("NULO ");
-        else
-          printf("%d ", record1.codProxEstacao);
+        printf("%d ", record1.codProxEstacao);
 
-        if (strlen(record2.nomeEstacao) == 0)
-          printf("NULO\n");
-        else
-          printf("%s\n", record2.nomeEstacao);
+        printf("%s\n", record2.nomeEstacao);
 
         // Como codEstacao é único, interrompemos a busca no arquivo 2
         break;
@@ -147,8 +133,7 @@ void nested_loop_join() {
     }
   }
 
-  // Caso não encontre nenhuma correspondência válida, exibe a mensagem
-  // para o usuário
+  // Caso não ache nenhum par, exibe uma mensagem para o usuário
   if (!found) {
     printf("Registro inexistente.\n");
   }

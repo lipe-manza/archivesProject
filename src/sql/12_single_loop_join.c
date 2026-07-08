@@ -60,7 +60,8 @@ void single_loop_join() {
     return;
   }
 
-  // Abre os arquivos de dados requeridos para a leitura
+  // Abre os arquivos de dados requeridos para a leitura, utilizando o
+  // open_binary_file
   f_bin1 = open_binary_file(bin_name1, "rb");
   if (f_bin1 == NULL) {
     file_processing_failure_single_join(&f_bin1, &f_bin2, &f_idx);
@@ -80,14 +81,14 @@ void single_loop_join() {
     return;
   }
 
-  // Valida o cabeçalho dos arquivos de dados
+  // Lê e valida o cabeçalho dos arquivos de dados
   if (!data_header_read(f_bin1, &header1) ||
       !data_header_read(f_bin2, &header2)) {
     file_processing_failure_single_join(&f_bin1, &f_bin2, &f_idx);
     return;
   }
 
-  // Valida o cabeçalho do arquivo de índice
+  // lê e valida o cabeçalho do arquivo de índice
   if (!btree_header_read(f_idx, &header_idx)) {
     file_processing_failure_single_join(&f_bin1, &f_bin2, &f_idx);
     return;
@@ -95,9 +96,6 @@ void single_loop_join() {
 
   bool found = false;
   int total_records1 = header1.proxRRN;
-
-  // Posiciona o ponteiro de leitura no início dos registros (após o cabeçalho)
-  fseek(f_bin1, HEADER_SIZE, SEEK_SET);
 
   // Itera somente sobre os registros do primeiro arquivo atuando como laço
   // externo
@@ -123,6 +121,9 @@ void single_loop_join() {
 
       // Lê o registro de forma direta quando a chave for encontrada no índice
       if (offset2 != BTREE_NOT_FOUND) {
+
+        // Vai diretamente para a posição no arquivo de dados onde o registro
+        // está
         fseek(f_bin2, offset2, SEEK_SET);
 
         if (!data_record_read(f_bin2, &record2)) {

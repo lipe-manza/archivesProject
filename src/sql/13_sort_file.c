@@ -27,24 +27,19 @@ void file_processing_failure_sort(FILE **f_in, FILE **f_out,
   printf("Falha no processamento do arquivo.\n");
 }
 
-// Função de comparação para o qsort baseada no campo codEstacao.
-// Ordenação crescente. Valores nulos (-1) são considerados maiores que qualquer
-// valor válido.
+// Função de comparação para o qsort a partir do campo codEstacao
+// Faz uma ordenação crescente
 int cmp_codEstacao(const void *a, const void *b) {
   const DataRecord *r1 = (const DataRecord *)a;
   const DataRecord *r2 = (const DataRecord *)b;
 
-  if (r1->codEstacao == -1 && r2->codEstacao != -1)
-    return 1;
-  if (r2->codEstacao == -1 && r1->codEstacao != -1)
-    return -1;
-
   return r1->codEstacao - r2->codEstacao;
 }
 
-// Função de comparação para o qsort baseada no campo codProxEstacao.
-// Ordenação crescente. Valores nulos (-1) são considerados maiores que qualquer
-// valor válido.
+// Função de comparação para o qsort a partir do campo codProxEstacao
+// Faz uma ordenação crescente
+// Valores nulos (-1) são considerados maiores que qualquer valor válido para
+// ficarem no final
 int cmp_codProxEstacao(const void *a, const void *b) {
   const DataRecord *r1 = (const DataRecord *)a;
   const DataRecord *r2 = (const DataRecord *)b;
@@ -57,7 +52,7 @@ int cmp_codProxEstacao(const void *a, const void *b) {
   return r1->codProxEstacao - r2->codProxEstacao;
 }
 
-// Funcionalidade 13: Ordenação de um arquivo de dados na memória primária.
+// Ordenação de um arquivo de dados na memória principal
 void sort_file() {
   FILE *f_in = NULL;
   FILE *f_out = NULL;
@@ -85,6 +80,7 @@ void sort_file() {
     return;
   }
 
+  // Aloca dinamicamente um vetor de registros
   int total_records = header_in.proxRRN;
   registros = (DataRecord *)malloc(total_records * sizeof(DataRecord));
   if (registros == NULL) {
@@ -94,12 +90,10 @@ void sort_file() {
 
   int qtd_validos = 0;
 
-  // Posiciona o ponteiro de leitura após o cabeçalho
-  fseek(f_in, HEADER_SIZE, SEEK_SET);
-
   // Carrega todos os registros válidos para a memória RAM
-  for (int rrn = 0; rrn < total_records; rrn++) {
+  for (int RRN = 0; RRN < total_records; RRN++) {
 
+    // Lê o registro para a struct
     DataRecord current_record;
     if (!data_record_read(f_in, &current_record)) {
       file_processing_failure_sort(&f_in, &f_out, &registros);
@@ -110,10 +104,13 @@ void sort_file() {
       continue;
     }
 
+    // Coloca o registro no array e incrementa a quantidade de registros válidos
     registros[qtd_validos] = current_record;
     qtd_validos++;
   }
 
+  // Fecha o arquivo de entrada e "apaga" o endereço antigo do ponteiro para não
+  // tentar acessar o arquivo já fechado
   fclose(f_in);
   f_in = NULL;
 
@@ -124,20 +121,19 @@ void sort_file() {
   } else if (strcmp(campo, "codProxEstacao") == 0) {
     qsort(registros, qtd_validos, sizeof(DataRecord), cmp_codProxEstacao);
   } else {
-    // Caso um campo de ordenação inválido seja passado (não especificado pelo
-    // trabalho, mas por segurança)
+    // Caso um campo de ordenação inválido seja passado
     file_processing_failure_sort(&f_in, &f_out, &registros);
     return;
   }
 
   // Cria o arquivo de saída
-  f_out = fopen(bin_name_out, "wb");
+  f_out = open_binary_file(bin_name_out, "wb");
   if (f_out == NULL) {
     file_processing_failure_sort(&f_in, &f_out, &registros);
     return;
   }
 
-  // Prepara o novo cabeçalho, assumindo inconsistência temporária
+  // Cria o novo cabeçalho a partir do antigo mas "resetando" a remoção lógica
   DataHeader header_out;
   header_out.status = '0';
   header_out.topo = -1;
@@ -145,6 +141,7 @@ void sort_file() {
   header_out.nroEstacoes = header_in.nroEstacoes;
   header_out.nroParesEstacoes = header_in.nroParesEstacoes;
 
+  // Escreve o novo cabeçalho no arquivo
   if (!data_header_write(f_out, &header_out)) {
     file_processing_failure_sort(&f_in, &f_out, &registros);
     return;
@@ -153,7 +150,6 @@ void sort_file() {
   // Grava cada um dos registros ordenados sequencialmente
   for (int i = 0; i < qtd_validos; i++) {
 
-    // Todos os registros aqui são válidos e persistentes
     if (!data_record_write(f_out, &registros[i])) {
       file_processing_failure_sort(&f_in, &f_out, &registros);
       return;

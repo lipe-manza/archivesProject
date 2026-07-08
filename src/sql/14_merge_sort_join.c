@@ -58,58 +58,62 @@ static int cmp_codEstacao_merge(const void *a, const void *b) {
   return r1->codEstacao - r2->codEstacao;
 }
 
-// Funcionalidade 14: Ordenação-Intercalação (Merge Sort Join)
 // Realiza a junção na memória RAM após ordenação baseada nos atributos da
 // condição de junção.
 void merge_sort_join() {
   FILE *f_bin1 = NULL;
   FILE *f_bin2 = NULL;
-  DataRecord *registros1 = NULL;
-  DataRecord *registros2 = NULL;
+  DataRecord *records1 = NULL;
+  DataRecord *records2 = NULL;
 
   char bin_name1[50], field1[50];
   char bin_name2[50], field2[50];
 
   // Leitura dos nomes e dos campos
   if (scanf("%s %s", bin_name1, field1) != 2) {
-    file_processing_failure_merge(&f_bin1, &f_bin2, &registros1, &registros2);
+    file_processing_failure_merge(&f_bin1, &f_bin2, &records1, &records2);
     return;
   }
   if (scanf("%s %s", bin_name2, field2) != 2) {
-    file_processing_failure_merge(&f_bin1, &f_bin2, &registros1, &registros2);
+    file_processing_failure_merge(&f_bin1, &f_bin2, &records1, &records2);
     return;
   }
 
-  // Abertura e validação do primeiro arquivo
-  f_bin1 = open_binary_file(bin_name1, "rb");
+  // Abertura e validação do primeiro arquivo utilizando o open_binary_file
+  f_bin1 = open_binary_file(bin_name1, "rb+");
   if (f_bin1 == NULL) {
-    file_processing_failure_merge(&f_bin1, &f_bin2, &registros1, &registros2);
+    file_processing_failure_merge(&f_bin1, &f_bin2, &records1, &records2);
     return;
   }
   DataHeader header1;
   if (!data_header_read(f_bin1, &header1)) {
-    file_processing_failure_merge(&f_bin1, &f_bin2, &registros1, &registros2);
+    file_processing_failure_merge(&f_bin1, &f_bin2, &records1, &records2);
     return;
   }
+  // Atualiza o status do cabeçalho para inconsistente
+  header1.status = '0';
 
-  // Abertura e validação do segundo arquivo
-  f_bin2 = open_binary_file(bin_name2, "rb");
+  // Abertura e validação do segundo arquivo utilizando o open_binary_file
+  f_bin2 = open_binary_file(bin_name2, "rb+");
   if (f_bin2 == NULL) {
-    file_processing_failure_merge(&f_bin1, &f_bin2, &registros1, &registros2);
+    file_processing_failure_merge(&f_bin1, &f_bin2, &records1, &records2);
     return;
   }
   DataHeader header2;
   if (!data_header_read(f_bin2, &header2)) {
-    file_processing_failure_merge(&f_bin1, &f_bin2, &registros1, &registros2);
+    file_processing_failure_merge(&f_bin1, &f_bin2, &records1, &records2);
     return;
   }
+  // Atualiza o status do cabeçalho para inconsistente
+  header2.status = '0';
 
-  // Aloca a memória exata para a carga completa dos registros
-  registros1 = (DataRecord *)malloc(header1.proxRRN * sizeof(DataRecord));
-  registros2 = (DataRecord *)malloc(header2.proxRRN * sizeof(DataRecord));
+  // Aloca a memória necessária para armazenar os dois registros na HEAP(um
+  // pouco a mais, visto que não guarda registros removidos na HEAP)
+  records1 = (DataRecord *)malloc(header1.proxRRN * sizeof(DataRecord));
+  records2 = (DataRecord *)malloc(header2.proxRRN * sizeof(DataRecord));
 
-  if (registros1 == NULL || registros2 == NULL) {
-    file_processing_failure_merge(&f_bin1, &f_bin2, &registros1, &registros2);
+  if (records1 == NULL || records2 == NULL) {
+    file_processing_failure_merge(&f_bin1, &f_bin2, &records1, &records2);
     return;
   }
 
@@ -117,91 +121,156 @@ void merge_sort_join() {
   int count2 = 0;
 
   // Carrega e filtra o arquivo 1
-  fseek(f_bin1, HEADER_SIZE, SEEK_SET);
   for (int rrn = 0; rrn < header1.proxRRN; rrn++) {
     DataRecord current_record;
     if (!data_record_read(f_bin1, &current_record)) {
-      file_processing_failure_merge(&f_bin1, &f_bin2, &registros1, &registros2);
+      file_processing_failure_merge(&f_bin1, &f_bin2, &records1, &records2);
       return;
     }
     if (current_record.removido != '1') {
-      registros1[count1++] = current_record;
+      records1[count1++] = current_record;
     }
   }
 
   // Carrega e filtra o arquivo 2
-  fseek(f_bin2, HEADER_SIZE, SEEK_SET);
   for (int rrn = 0; rrn < header2.proxRRN; rrn++) {
     DataRecord current_record;
     if (!data_record_read(f_bin2, &current_record)) {
-      file_processing_failure_merge(&f_bin1, &f_bin2, &registros1, &registros2);
+      file_processing_failure_merge(&f_bin1, &f_bin2, &records1, &records2);
       return;
     }
     if (current_record.removido != '1') {
-      registros2[count2++] = current_record;
+      records2[count2++] = current_record;
     }
   }
 
-  // Ordena os arrays baseado na especificação (codProxEstacao para o arq1,
-  // codEstacao para o arq2)
-  qsort(registros1, count1, sizeof(DataRecord), cmp_codProxEstacao_merge);
-  qsort(registros2, count2, sizeof(DataRecord), cmp_codEstacao_merge);
+  // Ordena os registros baseado utilizando, codProxEstacao para o arq1,
+  // codEstacao para o arq2, deixando os NULOS no final
+  qsort(records1, count1, sizeof(DataRecord), cmp_codProxEstacao_merge);
+  qsort(records2, count2, sizeof(DataRecord), cmp_codEstacao_merge);
 
-  // Fecha os arquivos pois não acessaremos o disco durante o merge
+  // Reescreve os arquivos de dados ordenadamente
+
+  // Atualiza o cabeçalho a partir do antigo mas "resetando" a remoção lógica
+  header1.topo = -1;
+  header1.proxRRN = count1;
+  header1.nroEstacoes = header1.nroEstacoes;
+  header1.nroParesEstacoes = header1.nroParesEstacoes;
+
+  // Fecha o arquivo rb+ e reabre como wb para truncar (remover lixo no final)
+  fclose(f_bin1);
+  f_bin1 = open_binary_file(bin_name1, "wb");
+  if (f_bin1 == NULL) {
+    file_processing_failure_merge(&f_bin1, &f_bin2, &records1, &records2);
+    return;
+  }
+
+  // Escreve o novo cabeçalho no arquivo
+  if (!data_header_write(f_bin1, &header1)) {
+    file_processing_failure_merge(&f_bin1, &f_bin2, &records1, &records2);
+    return;
+  }
+
+  // Grava cada um dos registros ordenados sequencialmente
+  for (int i = 0; i < count1; i++) {
+
+    if (!data_record_write(f_bin1, &records1[i])) {
+      file_processing_failure_merge(&f_bin1, &f_bin2, &records1, &records2);
+      return;
+    }
+  }
+
+  // Atualiza o status do arquivo final para consistente
+  header1.status = '1';
+  if (!data_header_write(f_bin1, &header1)) {
+    file_processing_failure_merge(&f_bin1, &f_bin2, &records1, &records2);
+    return;
+  }
+
+  // Salva e fecha o arquivo 1
   fclose(f_bin1);
   f_bin1 = NULL;
+
+  // Atualiza o cabeçalho a partir do antigo mas "resetando" a remoção lógica
+  header2.topo = -1;
+  header2.proxRRN = count2;
+  header2.nroEstacoes = header2.nroEstacoes;
+  header2.nroParesEstacoes = header2.nroParesEstacoes;
+
+  // Fecha o arquivo rb+ e reabre como wb para truncar (remover lixo no final)
+  fclose(f_bin2);
+  f_bin2 = open_binary_file(bin_name2, "wb");
+  if (f_bin2 == NULL) {
+    file_processing_failure_merge(&f_bin1, &f_bin2, &records1, &records2);
+    return;
+  }
+
+  // Escreve o novo cabeçalho no arquivo
+  if (!data_header_write(f_bin2, &header2)) {
+    file_processing_failure_merge(&f_bin1, &f_bin2, &records1, &records2);
+    return;
+  }
+
+  // Grava cada um dos registros ordenados sequencialmente
+  for (int i = 0; i < count2; i++) {
+
+    if (!data_record_write(f_bin2, &records2[i])) {
+      file_processing_failure_merge(&f_bin1, &f_bin2, &records1, &records2);
+      return;
+    }
+  }
+
+  // Atualiza o status do arquivo final para consistente
+  header2.status = '1';
+  if (!data_header_write(f_bin2, &header2)) {
+    file_processing_failure_merge(&f_bin1, &f_bin2, &records1, &records2);
+    return;
+  }
+
+  // Salva e fecha o arquivo 2
   fclose(f_bin2);
   f_bin2 = NULL;
 
+  // Variáveis auxiliares
   int i = 0, j = 0;
   bool found = false;
 
-  // Intercala (Merge) simultâneo buscando a condição: estacao1.codProxEstacao
-  // == estacao2.codEstacao
+  // Percorre os dois registros ordenados ao mesmo tempo procurando registros
+  // que satisfaçam a condição estacao1.codProxEstacao == estacao2.codEstacao.
   while (i < count1 && j < count2) {
     // Para no primeiro valor nulo detectado, já que as funções os jogam para o
     // final
-    if (registros1[i].codProxEstacao == -1 || registros2[j].codEstacao == -1) {
+    if (records1[i].codProxEstacao == -1) {
       break;
     }
 
-    if (registros1[i].codProxEstacao < registros2[j].codEstacao) {
+    if (records1[i].codProxEstacao < records2[j].codEstacao) {
       i++;
-    } else if (registros1[i].codProxEstacao > registros2[j].codEstacao) {
+    } else if (records1[i].codProxEstacao > records2[j].codEstacao) {
       j++;
     } else {
       // Cruzamento encontrado
       found = true;
 
       // Impressão padronizada, ignorando dados ausentes
-      if (registros1[i].codEstacao == -1)
+      printf("%d ", records1[i].codEstacao);
+
+      printf("%s ", records1[i].nomeEstacao);
+
+      if (strlen(records1[i].nomeLinha) == 0)
         printf("NULO ");
       else
-        printf("%d ", registros1[i].codEstacao);
+        printf("%s ", records1[i].nomeLinha);
 
-      if (strlen(registros1[i].nomeEstacao) == 0)
+      if (records1[i].codProxEstacao == -1)
         printf("NULO ");
       else
-        printf("%s ", registros1[i].nomeEstacao);
+        printf("%d ", records1[i].codProxEstacao);
 
-      if (strlen(registros1[i].nomeLinha) == 0)
-        printf("NULO ");
-      else
-        printf("%s ", registros1[i].nomeLinha);
+      printf("%s\n", records2[j].nomeEstacao);
 
-      if (registros1[i].codProxEstacao == -1)
-        printf("NULO ");
-      else
-        printf("%d ", registros1[i].codProxEstacao);
-
-      if (strlen(registros2[j].nomeEstacao) == 0)
-        printf("NULO\n");
-      else
-        printf("%s\n", registros2[j].nomeEstacao);
-
-      // Avançamos somente o 'i'. Em relacionamentos N-para-1 onde codEstacao é
-      // PK, Múltiplos registros de estacao1 podem apontar para a mesma
-      // estacao2.
+      // Avança apenas o 'i', pois há uma relação N para 1:
+      // várias estações podem ter o mesmo codProxEstacao.
       i++;
     }
   }
@@ -210,6 +279,7 @@ void merge_sort_join() {
     printf("Registro inexistente.\n");
   }
 
-  free(registros1);
-  free(registros2);
+  // Da free nas memórias alocadas
+  free(records1);
+  free(records2);
 }
