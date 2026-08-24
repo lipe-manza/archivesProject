@@ -1,10 +1,15 @@
-#include "../../headers/B_tree.h"
-#include "../../headers/IO.h"
-#include "../../headers/registro.h"
+#include "../../include/IO.h"
+#include "../../include/btree.h"
+#include "../../include/data_header.h"
+#include "../../include/data_record.h"
+#include <stdio.h>
+#include <stdlib.h>
 
-// Função auxiliar para evitar repetição quando há falha no processamento do
-// arquivo
-void falha_processamento_arquivo(FILE **f1, FILE **f2) {
+#define DATA_HEADER_SIZE 17
+#define DATA_RECORD_SIZE 80
+
+// Função auxiliar para limpar memória e fechar arquivos em caso de erro,
+static void file_processing_failure_create_index(FILE **f1, FILE **f2) {
   if (f1 != NULL && *f1 != NULL) {
     fclose(*f1);
     *f1 = NULL;
@@ -14,84 +19,88 @@ void falha_processamento_arquivo(FILE **f1, FILE **f2) {
     *f2 = NULL;
   }
 
-  printf("Falha no processamento do arquivo.");
+  printf("Falha no processamento do arquivo.\n");
 }
 
-// Função principal para converter o arquivo .csv para .bin
-void create_index_ab() {
-  FILE *f_entrada = NULL;
-  FILE *f_arvore_b = NULL;
-
-  // Leitura dos nomes dos arquivos binários de entrada e de indexação da árvore
-  // B
+// Cria um arquivo de índice Árvore-B a partir de
+// um arquivo de dados existente.
+void create_index() {
   char nome_entrada[50];
   char nome_arvore_b[50];
 
   if (scanf("%s %s", nome_entrada, nome_arvore_b) != 2)
     return;
 
-  // Abertura do arquivo binário de entrada para leitura
-  f_entrada = fopen(nome_entrada, "rb");
+  // Abre para leitura e verifica se está consistente
+  FILE *f_entrada = open_binary_file(nome_entrada, "rb");
   if (f_entrada == NULL) {
-    falha_processamento_arquivo(&f_entrada, &f_arvore_b);
+    file_processing_failure_create_index(NULL, NULL);
     return;
   }
 
-  // Criação do arquivo da árvore B com escrita binária
-  f_arvore_b = fopen(nome_arvore_b, "wb");
+  // O arquivo de índice precisa ser 'wb+' porque a inserção na Árvore-B
+  // precisa ler(ver se a key já existe) e escrever(inserir) no disco
+  // Marca o status como inconstistente
+  FILE *f_arvore_b = open_binary_file(nome_arvore_b, "wb+");
   if (f_arvore_b == NULL) {
-    falha_processamento_arquivo(&f_entrada, &f_arvore_b);
+    file_processing_failure_create_index(&f_entrada, NULL);
     return;
   }
 
-  // Cria a struct do cabeçalho do arquivo de entrada
-  CAB cab_entrada;
-  ler_cab_bin(f_entrada, &cab_entrada);
+  // Inicialização das structs na stack
+  DataHeader cab_entrada;
+  DataRecord registro;
+  BTreeHeader headerBt = {'0', -1, -1, 0, 0};
 
-  tornar_inconsistente(f_arvore_b);
+  // Leitura do cabeçalho do arquivo de dados
+  if (!data_header_read(f_entrada, &cab_entrada)) {
+    file_processing_failure_create_index(&f_entrada, &f_arvore_b);
+    return;
+  }
 
-  // Cria a struct do cabeçalho do arquivo da árvore B
-  HEADER_BT headerBt;
-  builder_header_B_tree(&headerBt, '0', -1, -1, 0, 0);
+  // O status padrão do construtor já é '0' (inconsistente)
+  if (!btree_header_write(f_arvore_b, &headerBt)) {
+    file_processing_failure_create_index(&f_entrada, &f_arvore_b);
+    return;
+  }
 
-  write_B_tree_header_in_bin(f_arvore_b, &headerBt);
+  int prox_rrn_dados = cab_entrada.proxRRN;
 
-  // Struct registro auxiliar para ler os registros do arquivo de entrada
-  REG registro;
+  // Itera sobre todos os registros do arquivo de dados
+  for (int RRN = 0; RRN < prox_rrn_dados; RRN++) {
 
-  // Pula para a posição do primeiro registro
-  fseek(f_entrada, TAM_CABECALHO, SEEK_SET);
-
-  // Itera sobre os registros do arquivo de entrada e os insere na árvore B
-  for (int RRN = 0; RRN < cab_entrada.proxRRN; RRN++) {
-    // Lê o registro do arquivo de entrada para a struct registro
-    if (!ler_reg_bin(f_entrada, &registro)) {
-      falha_processamento_arquivo(&f_entrada, &f_arvore_b);
+    // Tenta ler o registro atual
+    if (!data_record_read(f_entrada, &registro)) {
+      file_processing_failure_create_index(&f_entrada, &f_arvore_b);
       return;
-    };
+    }
 
-    // O registro só é impresso se não estiver removido
+    // Se for lógicamente removido não insere na B-Tree
     if (registro.removido == '0') {
+      BTreeKey key;
+      key.C = registro.codEstacao;
 
-      // KEY key = {codEst, REG_BYTE_OFFSET(RNN)};
-      // inserir_bt(f_bt, &cab_bt, key)
+      // O byteOffset = Tamanho do Cabeçalho + (RRN * Tamanho do Registro)
+      key.Pr = DATA_HEADER_SIZE + (RRN * DATA_RECORD_SIZE);
+
+      // Insere na Árvore-B
+      if (!btree_insert_key(f_arvore_b, &headerBt, key)) {
+        file_processing_failure_create_index(&f_entrada, &f_arvore_b);
+        return;
+      }
     }
   }
 
-  // Escrita do registro de cabeçalho
+  // Atualiza o status para consistente ('1') e salva o cabeçalho final
+  headerBt.status = '1';
+  if (!btree_header_write(f_arvore_b, &headerBt)) {
+    file_processing_failure_create_index(&f_entrada, &f_arvore_b);
+    return;
+  }
 
-  // Aponta para o inicio do arquivo binário e escreve o status como
-  // consistente pois o arquivo foi escrito com sucesso
-  fseek(f_arvore_b, 0, SEEK_SET);
-  int status = '1';
-  fwrite(&status, sizeof(char), 1, f_arvore_b);
-
-  // ESCREVER AS COISAS NO CABEÇALHO
-
-  // Fecha os arquivos binários
-  close_files(f_entrada, f_arvore_b);
+  // Fecha os arquivos
+  fclose(f_entrada);
+  fclose(f_arvore_b);
 
   BinarioNaTela(nome_arvore_b);
-
-  return;
 }

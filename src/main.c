@@ -3,7 +3,7 @@
 
 #include <stdio.h>
 
-#include "../headers/sql_functions.h"
+#include "../include/sql_functions.h"
 
 int main() {
   int n = 0;
@@ -39,8 +39,21 @@ int main() {
     break;
   case 9: // INSERT INTO AB
     insert_into_ab();
+    break;
   case 10: // DELETE FROM WHERE AB
     delete_from_where_ab();
+    break;
+  case 11: // NESTED LOOP JOIN
+    nested_loop_join();
+    break;
+  case 12: // SINGLE LOOP JOIN
+    single_loop_join();
+    break;
+  case 13: // SORT FILE
+    sort_file();
+    break;
+  case 14: // MERGE SORT JOIN
+    merge_sort_join();
     break;
   default:
     printf("Operação inválida.\n");

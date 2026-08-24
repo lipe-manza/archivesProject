@@ -1,213 +1,201 @@
+#include <stdio.h>
 #include <string.h>
 
-#include "../../headers/IO.h"
-#include "../../headers/hash_tables.h"
-#include "../../headers/registro.h"
-#include "../../headers/sql_functions.h"
+#include "../../include/IO.h"
+#include "../../include/data_header.h"
+#include "../../include/data_record.h"
+#include "../../include/hash_tables.h"
+#include "../../include/sql_functions.h"
 
-// Função auxiliar para evitar repetição quando há falha no processamento do
-// arquivo
-void falha_processamento_arquivo(FILE **f1, FILE **f2, HashEstacao **hash_est,
-                                 HashPar **hash_par) {
-  if (f1 != NULL && *f1 != NULL) {
-    fclose(*f1);
-    *f1 = NULL;
+// Chamada caso haja alguma falha no processamento. Libera a memória das
+// hashtables e fecha os arquivos abertos antes de imprimir a mensagem de erro.
+void file_processing_failure(FILE **f_csv, FILE **f_bin, HashEstacao **hash_est,
+                             HashPar **hash_par) {
+  if (f_csv != NULL && *f_csv != NULL) {
+    fclose(*f_csv);
+    *f_csv = NULL;
   }
-  if (f2 != NULL && *f2 != NULL) {
-    fclose(*f2);
-    *f2 = NULL;
+  if (f_bin != NULL && *f_bin != NULL) {
+    fclose(*f_bin);
+    *f_bin = NULL;
   }
-
-  if (hash_est != NULL)
+  if (hash_est != NULL && *hash_est != NULL) {
     free_hash_estacao(*hash_est);
-
-  if (hash_par != NULL)
+    *hash_est = NULL;
+  }
+  if (hash_par != NULL && *hash_par != NULL) {
     free_hash_par(*hash_par);
+    *hash_par = NULL;
+  }
 
-  printf("Falha no processamento do arquivo.");
+  printf("Falha no processamento do arquivo.\n");
 }
 
-// Função principal para converter o arquivo .csv para .bin
+// Função principal para converter o arquivo .csv de entrada em um arquivo
+// binário .bin. Lê os dados sequencialmente, popula os registros de dados e
+// indexa as estações e pares únicos.
 void create_table() {
   FILE *f_csv = NULL;
   FILE *f_bin = NULL;
   HashEstacao *hash_est = NULL;
   HashPar *hash_par = NULL;
 
-  // Leitura dos nomes dos arquivos .csv e .bin
-  char bin_name[50];
-  char csv_name[50];
-  if (scanf("%s %s", csv_name, bin_name) != 2)
-    return;
+  // Instancia na stack o cabeçalho
+  DataHeader header = {'0', -1, 0, 0, 0};
 
-  // Cria as hashtables para contar as estações e pares de estações únicas
+  // Lê os nomes dos arquivos .csv e .bin da entrada padrão
+  char csv_name[50];
+  char bin_name[50];
+  if (scanf("%s %s", csv_name, bin_name) != 2) {
+    file_processing_failure(&f_csv, &f_bin, &hash_est, &hash_par);
+    return;
+  }
+
+  // Inicializa as tabelas hash para contar estações e pares de estações únicos
   hash_est = criar_hash_estacao();
   hash_par = criar_hash_par();
 
-  // Encerra o programa em caso de falha de alocação de alguma das hashtables
+  // Aborta se a alocação das tabelas hash falhar
   if (hash_est == NULL || hash_par == NULL) {
-    falha_processamento_arquivo(&f_csv, &f_bin, &hash_est, &hash_par);
+    file_processing_failure(&f_csv, &f_bin, &hash_est, &hash_par);
     return;
   }
 
-  // Abertura do arquivo .csv para leitura
+  // Abre o arquivo .csv para leitura
   f_csv = fopen(csv_name, "r");
   if (f_csv == NULL) {
-    falha_processamento_arquivo(&f_csv, &f_bin, &hash_est, &hash_par);
+    file_processing_failure(&f_csv, &f_bin, &hash_est, &hash_par);
     return;
   }
 
-  // Criação do arquivo .bin com escrita binária
-  f_bin = open_bin(bin_name, "wb");
+  // Cria o arquivo .bin com modo de escrita binária ("wb"), e marca como
+  // inconsistente o status
+  f_bin = open_binary_file(bin_name, "wb");
   if (f_bin == NULL) {
-    falha_processamento_arquivo(&f_csv, &f_bin, &hash_est, &hash_par);
+    file_processing_failure(&f_csv, &f_bin, &hash_est, &hash_par);
     return;
   }
 
-  tornar_inconsistente(f_bin);
+  // Escreve o cabeçalho inicial inconsistente no arquivo binário
+  data_header_write(f_bin, &header);
 
-  // Constrói e escreve o cabeçalho no arquivo
-  CAB cabecalho;
-
-  // status = 0; topo = -1; proxRRN = 0; nroEstacoes = 0; nroParesEstacao = 0;
-  construir_cab(&cabecalho, '0', -1, 0, 0, 0);
-
-  escrever_cab_bin(f_bin, &cabecalho);
-
-  // Variáveis auxiliares
   char buffer[256];
 
-  REG registro;
-
-  // Pula a linha de cabeçalho do arquivo .csv
+  // Pula a primeira linha do CSV (linha de cabeçalho do arquivo texto)
   if (fgets(buffer, sizeof(buffer), f_csv) == NULL) {
-    falha_processamento_arquivo(&f_csv, &f_bin, &hash_est, &hash_par);
+    file_processing_failure(&f_csv, &f_bin, &hash_est, &hash_par);
     return;
   }
 
-  // Lê o arquivo CSV linha por linha e processa cada registro escrevendo no
-  // arquivo binário
+  // Lê o arquivo CSV linha por linha e processa cada registro
   while (fgets(buffer, sizeof(buffer), f_csv) != NULL) {
-    // Trunca a linha lida para remover o \r e o \n
+    // Trunca a string lida para remover \r e \n
     buffer[strcspn(buffer, "\r\n")] = '\0';
 
-    // Variáveis para tokenização da linha lida
     char *p = buffer;
     char *token;
 
-    // Inicializa os campos removido e próximo
-    registro.removido = '0';
-    registro.proximo = -1;
+    // Reseta o status de removido e o ponteiro de próximo por segurança
+    DataRecord record = {0};
+    record.removido = '0';
+    record.proximo = -1;
 
-    // Tokeniza a linha lida usando strsep e separa os campos usando a
-    // vírgula como delimitador
+    // Tokeniza a linha lida usando strsep com delimitador vírgula (',')
 
-    // Transforma o primeiro token (código da estação) de string para
-    // inteiro e salva no registro auxiliar
+    // 1. codEstacao
     token = strsep(&p, ",");
     if (token == NULL) {
-      falha_processamento_arquivo(&f_csv, &f_bin, &hash_est, &hash_par);
+      file_processing_failure(&f_csv, &f_bin, &hash_est, &hash_par);
       return;
     }
-    registro.codEstacao = satoi(token, -1);
+    record.codEstacao = safe_atoi(token, -1);
 
-    // Processa o segundo token (nome da estação)
-    // e salva o tamanho e a string no registro auxiliar
+    // 2. nomeEstacao
     token = strsep(&p, ",");
     if (token == NULL) {
-      falha_processamento_arquivo(&f_csv, &f_bin, &hash_est, &hash_par);
+      file_processing_failure(&f_csv, &f_bin, &hash_est, &hash_par);
       return;
     }
-    registro.tamNomeEstacao = strlen(token);
-    strcpy(registro.nomeEstacao, token);
+    record.tamNomeEstacao = strlen(token);
+    strncpy(record.nomeEstacao, token, sizeof(record.nomeEstacao) - 1);
+    record.nomeEstacao[sizeof(record.nomeEstacao) - 1] = '\0';
 
-    // Transforma o terceiro token (código da linha) de string para inteiro
-    // e salva no registro auxiliar
+    // 3. codLinha
     token = strsep(&p, ",");
     if (token == NULL) {
-      falha_processamento_arquivo(&f_csv, &f_bin, &hash_est, &hash_par);
+      file_processing_failure(&f_csv, &f_bin, &hash_est, &hash_par);
       return;
     }
-    registro.codLinha = satoi(token, -1);
+    record.codLinha = safe_atoi(token, -1);
 
-    // Processa o quarto token (nome da linha)
-    // e salva o tamanho e a string no registro auxiliar
+    // 4. nomeLinha
     token = strsep(&p, ",");
-    if (token == NULL) {
-      registro.tamNomeLinha = 0;
-      registro.nomeLinha[0] = '\0';
+    if (token == NULL || strlen(token) == 0) {
+      record.tamNomeLinha = 0;
+      record.nomeLinha[0] = '\0';
     } else {
-      registro.tamNomeLinha = strlen(token);
-      strcpy(registro.nomeLinha, token);
+      record.tamNomeLinha = strlen(token);
+      strncpy(record.nomeLinha, token, sizeof(record.nomeLinha) - 1);
+      record.nomeLinha[sizeof(record.nomeLinha) - 1] = '\0';
     }
 
-    // Transforma o quinto token (código da próxima estação) de string para
-    // inteiro e salva no registro auxiliar
+    // 5. codProxEstacao
     token = strsep(&p, ",");
     if (token == NULL) {
-      falha_processamento_arquivo(&f_csv, &f_bin, &hash_est, &hash_par);
+      file_processing_failure(&f_csv, &f_bin, &hash_est, &hash_par);
       return;
     }
-    registro.codProxEstacao = satoi(token, -1);
+    record.codProxEstacao = safe_atoi(token, -1);
 
-    // Transforma o sexto token (distância para a próxima estação) de string
-    // para inteiro e salva no registro auxiliar
+    // 6. distProxEstacao
     token = strsep(&p, ",");
     if (token == NULL) {
-      falha_processamento_arquivo(&f_csv, &f_bin, &hash_est, &hash_par);
+      file_processing_failure(&f_csv, &f_bin, &hash_est, &hash_par);
       return;
     }
-    registro.distProxEstacao = satoi(token, -1);
+    record.distProxEstacao = safe_atoi(token, -1);
 
-    // Transforma o sétimo token (código da linha de integração) de string
-    // para inteiro E salva no registro auxiliar
+    // 7. codLinhaIntegra
     token = strsep(&p, ",");
     if (token == NULL) {
-      falha_processamento_arquivo(&f_csv, &f_bin, &hash_est, &hash_par);
+      file_processing_failure(&f_csv, &f_bin, &hash_est, &hash_par);
       return;
     }
-    registro.codLinhaIntegra = satoi(token, -1);
+    record.codLinhaIntegra = safe_atoi(token, -1);
 
-    // Transforma o oitavo token (código da estação de integração) de string
-    // para inteiro E salva no registro auxiliar
+    // 8. codEstIntegra
     token = strsep(&p, ",");
     if (token == NULL) {
-      falha_processamento_arquivo(&f_csv, &f_bin, &hash_est, &hash_par);
+      file_processing_failure(&f_csv, &f_bin, &hash_est, &hash_par);
       return;
     }
-    // Limpa o último token, caso ainda tenha sobrado quebras de linha
     token[strcspn(token, "\r\n")] = '\0';
-    registro.codEstIntegra = satoi(token, -1);
+    record.codEstIntegra = safe_atoi(token, -1);
 
-    // Escreve o registro no arquivo binário
-    escrever_reg_bin(f_bin, &registro);
+    // Escreve o registro preenchido no arquivo binário
+    data_record_write(f_bin, &record);
 
-    inserir_estacao(hash_est, registro.nomeEstacao);
-    inserir_par(hash_par, registro.codEstacao, registro.codProxEstacao);
+    // Insere nas tabelas hash para rastrear entradas únicas
+    inserir_estacao(hash_est, record.nomeEstacao);
+    inserir_par(hash_par, record.codEstacao, record.codProxEstacao);
 
-    cabecalho.proxRRN++;
+    // Incrementa o proxRRN no cabeçalho
+    header.proxRRN++;
   }
 
-  // Atualização dos campos do cabeçalho
-  cabecalho.nroEstacoes = get_nro_estacoes(hash_est);
-  cabecalho.nroParesEstacoes = get_nro_pares(hash_par);
+  // Atualiza os contadores finais no cabeçalho após varrer todo o CSV
+  header.nroEstacoes = get_nro_estacoes(hash_est);
+  header.nroParesEstacoes = get_nro_pares(hash_par);
 
-  // Atualiza e escreve o cabeçalho
-  cabecalho.status = '1';
-  escrever_cab_bin(f_bin, &cabecalho);
+  // Marca o arquivo como consistente ('1') e reescreve o cabeçalho atualizado
+  header.status = '1';
+  data_header_write(f_bin, &header);
 
-  // Fecha os arquivos e desaloca as hashtables
+  // Fecha arquivos e libera a memória das hashtables
   fclose(f_csv);
-  f_csv = NULL;
-
   fclose(f_bin);
-  f_bin = NULL;
-
   free_hash_estacao(hash_est);
-  hash_est = NULL;
-
   free_hash_par(hash_par);
-  hash_par = NULL;
 
   BinarioNaTela(bin_name);
 }

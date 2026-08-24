@@ -1,71 +1,78 @@
-#include "../../headers/IO.h"
-#include "../../headers/registro.h"
-#include "../../headers/sql_functions.h"
+#include <stdbool.h>
+#include <stdio.h>
 
-// Função auxiliar para evitar repetição quando há falha no processamento do
-// arquivo
-void falha_processamento_arquivo(FILE **f) {
-  if (f != NULL && *f != NULL) {
-    fclose(*f);
-    *f = NULL;
+#include "../../include/IO.h"
+#include "../../include/data_header.h"
+#include "../../include/data_record.h"
+#include "../../include/sql_functions.h"
+
+// Função auxiliar para evitar repetição de código quando há falha no
+// processamento. Fecha arquivos abertos antes de exibir a mensagem de erro.
+void file_processing_failure_select(FILE **f_bin) {
+  if (f_bin != NULL && *f_bin != NULL) {
+    fclose(*f_bin);
+    *f_bin = NULL;
   }
 
-  printf("Falha no processamento do arquivo.");
+  printf("Falha no processamento do arquivo.\n");
 }
 
+// Lê todos os registros do arquivo binário e imprime os que não estão
+// logicamente removidos.
 void select_from() {
   FILE *f_bin = NULL;
+  DataHeader header;
+  DataRecord record;
 
   // Lê o nome do arquivo binário
   char bin_name[50];
   if (scanf("%s", bin_name) != 1) {
-    falha_processamento_arquivo(&f_bin);
+    file_processing_failure_select(&f_bin);
     return;
   }
 
   // Abre o arquivo .bin para leitura e verifica se a abertura
   // foi bem sucedida conferindo o status do arquivo
-  f_bin = open_bin(bin_name, "rb");
-
+  f_bin = open_binary_file(bin_name, "rb");
   if (f_bin == NULL) {
-    falha_processamento_arquivo(&f_bin);
+    file_processing_failure_select(&f_bin);
     return;
   }
 
-  // Cria a struct do cabeçalho lendo do arquivo binário
-  CAB cabecalho;
-  ler_cab_bin(f_bin, &cabecalho);
+  // Instancia e cria a estrutura do cabeçalho lendo do arquivo binário
+  if (!data_header_read(f_bin, &header)) {
+    file_processing_failure_select(&f_bin);
+    return;
+  }
 
-  // Struct registro auxiliar para ler o .bin
-  REG registro;
+  // Flag para indicar se algum registro foi encontrado e exibido
+  bool found = false;
 
-  // Flag para indicar se algum registro foi encontrado
-  bool encontrou = false;
+  // Pular para o primeiro registro físico (após o cabeçalho)
+  fseek(f_bin, HEADER_SIZE, SEEK_SET);
 
-  // Pular para o primeiro registro
-  fseek(f_bin, TAM_CABECALHO, SEEK_SET);
+  // Itera por todos os registros previstos no arquivo binário
+  int total_records = header.proxRRN;
+  for (int rrn = 0; rrn < total_records; rrn++) {
 
-  // Itera pelos registros do .bin
-  for (int RRN = 0; RRN < cabecalho.proxRRN; RRN++) {
-    // Lê o registro do .bin para a struct registro
-    if (!ler_reg_bin(f_bin, &registro)) {
-      falha_processamento_arquivo(&f_bin);
+    // Lê o registro do .bin para a estrutura
+    if (!data_record_read(f_bin, &record)) {
+      file_processing_failure_select(&f_bin);
       return;
-    };
+    }
 
-    // O registro só é impresso se não estiver removido
-    if (registro.removido == '0') {
-      encontrou = true;
-      print_registro_in_terminal(&registro);
+    // O registro só é impresso se não estiver marcado como removido
+    if (record.removido == '0') {
+      found = true;
+      display_data_record(&record);
     }
   }
 
-  // Se nenhum registro foi encontrado, o usuário é avisado
-  if (!encontrou) {
+  // Se nenhum registro for encontrado, o usuário é avisado
+  if (!found) {
     printf("Registro inexistente.\n");
   }
 
-  // Fecha o arquivo .bin
+  // Fecha o arquivo
   fclose(f_bin);
-  f_bin = NULL;
 }

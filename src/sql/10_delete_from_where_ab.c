@@ -1,110 +1,148 @@
-#include "../../headers/IO.h"
-#include "../../headers/filtro.h"
-#include "../../headers/sql_functions.h"
+#include "../../include/IO.h"
+#include "../../include/btree.h"
+#include "../../include/data_header.h"
+#include "../../include/data_record.h"
+#include "../../include/filtro.h"
+#include "../../include/sql_functions.h"
+#include "../../include/tools.h"
+#include <stdio.h>
+#include <stdlib.h>
 
-// Função auxiliar para fechar os arquivos
-void close_files(FILE *f_entrada, FILE *f_arvore_b) {
-  if (f_entrada)
-    fclose(f_entrada);
-  if (f_arvore_b)
-    fclose(f_arvore_b);
+#define DATA_HEADER_SIZE 17
+#define DATA_RECORD_SIZE 80
+
+// Fecha os arquivos de forma segura.
+static void file_processing_failure_delete_bt(FILE **f_data, FILE **f_btree) {
+  if (f_data && *f_data) {
+    fclose(*f_data);
+    *f_data = NULL;
+  }
+  if (f_btree && *f_btree) {
+    fclose(*f_btree);
+    *f_btree = NULL;
+  }
+
+  printf("Falha no processamento do arquivo.\n");
 }
 
+// Executa a remoção lógica de um registro de dados, atualizando a pilha de
+// removidos no cabeçalho do arquivo de dados.
+static void perform_data_deletion(FILE *f_data, DataHeader *cab_dados,
+                                  DataRecord *registro, int rrn) {
+  // Marca o registro como removido e faz o campo 'proxRRN' apontar para o
+  // antigo topo
+  registro->removido = '1';
+  registro->proximo = cab_dados->topo;
+
+  // Atualiza o topo do cabeçalho
+  cab_dados->topo = rrn;
+
+  // Grava as alterações do registro removido em disco
+  long offset = DATA_HEADER_SIZE + (long)(rrn * DATA_RECORD_SIZE);
+  fseek(f_data, offset, SEEK_SET);
+  data_record_write(f_data, registro);
+}
+
+// Executa a remoção lógica dos registros que batem com o filtro e atualiza a
+// árvore B
 void delete_from_where_ab() {
-  // Lê o nome do arquivo binário de entrada e da árvore B
-  char nome_entrada[50];
-  char nome_arvore_b[50];
+  char input_filename[50];
+  char btree_filename[50];
+  int n_queries;
 
-  if (scanf("%s %s", nome_entrada, nome_arvore_b) != 2) {
-    printf("Falha na leitura dos nomes do arquivos.\n");
+  // Lê os nomes do arquivo de entrada e da árvore B e o número de consultas
+  if (scanf("%s %s %d", input_filename, btree_filename, &n_queries) != 3)
+    return;
+
+  // Abre os arquivos binários para escrita e leitura, confere a consistência e
+  // marca o status como inconsistentes
+  FILE *f_data = open_binary_file(input_filename, "rb+");
+  FILE *f_btree = open_binary_file(btree_filename, "rb+");
+
+  // Confere se os arquivos foram abertos corretamente
+  if (!f_data || !f_btree) {
+    file_processing_failure_delete_bt(&f_data, &f_btree);
     return;
   }
 
-  // Abre o arquivo binário de entrada para leitura e verifica se a abertura
-  // foi bem sucedida conferindo o status do arquivo
-  FILE *f_entrada = open_bin(nome_entrada, "rb");
-  if (f_entrada == NULL)
-    return;
+  // Instancia as structs necessárias para as leituras dos cabeçalhos, registros
+  // e nós dos arquivos binários na stack
+  DataHeader cab_dados = {0};
+  BTreeHeader cab_btree = {0};
+  DataRecord filter = {0};
+  DataRecord registro = {0};
 
-  // Vai para o campo proxRRN do registro de cabeçalho para ler quantos
-  // registros existem
-  int reg_count = 0;
-  fseek(f_entrada, POS_PROX_RRN, SEEK_SET);
-  if (fread(&reg_count, sizeof(int), 1, f_entrada) != 1) {
-    printf("Falha no processamento do arquivo.\n");
-    fclose(f_entrada);
+  // Faz a leitura dos cabeçalhos dos arquivos binários
+  if (!data_header_read(f_data, &cab_dados) ||
+      !btree_header_read(f_btree, &cab_btree)) {
+    file_processing_failure_delete_bt(&f_data, &f_btree);
     return;
   }
 
-  // Lê o número de sessões a serem feitas
-  int n;
-  if (scanf("%d", &n) != 1) {
-    printf("Entrada inválida.\n");
-    fclose(f_entrada);
-    return;
-  }
+  // Itera sobre as consultas
+  for (int i = 0; i < n_queries; i++) {
+    bool search_for[PUBLIC_FIELDS] = {false};
+    filter_build(&filter, search_for); // Preenche struct com dados do stdin
 
-  // Itera sobre as sessões de deleção
-  for (int i = 0; i < n; i++) {
-    // Struct registro que serve como comparação para filtrar os registros do
-    // arquivo de entrada
-    REG filter;
+    // Caso 1: campo 'codEstacao', que é chave da árvore B, foi informado
+    if (search_for[COD_ESTACAO]) {
+      int target_key = filter.codEstacao;
+      int offset = btree_search_key(f_btree, &cab_btree, target_key);
 
-    // Array auxiliar para informar quais campos devem ser pesquisados e
-    // comparados com o filtro
-    bool search_for[PUBLIC_FIELDS];
+      if (offset != BTREE_NOT_FOUND) {
+        int rrn = (offset - DATA_HEADER_SIZE) / DATA_RECORD_SIZE;
+        fseek(f_data, offset, SEEK_SET);
 
-    // Preenche a struct filter com os valores do filtro de pesquisa
-    // e o array search com os campos a serem comparados
-    filter_build(&filter, search_for);
-
-    // Se um dos campos de busca for o codEstacao, usamos a árvore B
-    if (search_for[0]) {
-      // Abre o arquivo binário da árvore B para leitura e verifica se a
-      // abertura foi bem sucedida conferindo o status do arquivo
-      FILE *f_arvore_b = open_bin(nome_entrada, "rb+");
-      if (f_arvore_b == NULL) {
-        fclose(f_entrada);
-        return;
+        if (data_record_read(f_data, &registro) && registro.removido == '0') {
+          if (match_filter(&registro, search_for, &filter)) {
+            // Deleção dupla (Dados + Índice)
+            perform_data_deletion(f_data, &cab_dados, &registro, rrn);
+            btree_delete_key(f_btree, &cab_btree, target_key);
+          }
+        }
       }
+    }
+    // Caso 2: remoção comum iterando por toda a tabela
+    else {
+      int prox_rrn = cab_dados.proxRRN;
 
-      // REMOÇÃO ÁRVORE B
+      for (int rrn = 0; rrn < prox_rrn; rrn++) {
+        fseek(f_data, DATA_HEADER_SIZE + (long)(rrn * DATA_RECORD_SIZE),
+              SEEK_SET);
 
-      // Struct registro auxiliar para ler o binário
-      REG registro;
+        if (data_record_read(f_data, &registro) && registro.removido == '0') {
+          if (match_filter(&registro, search_for, &filter)) {
+            // Salva a chave antes de deletar do registro, pois precisaremos
+            // dela para encontrar o nó na Árvore-B
+            int key_to_remove = registro.codEstacao;
 
-      // Lê o registro do arquivo binário
-      read_from_bin(f_entrada, &registro);
-
-      // Se o registro passa pelo filtro ele é impresso
-      if (match_filter(&registro, search_for, &filter)) {
-        encontrou = true;
-        print_registro_in_terminal(&registro);
+            // Deleção dupla
+            perform_data_deletion(f_data, &cab_dados, &registro, rrn);
+            btree_delete_key(f_btree, &cab_btree, key_to_remove);
+          }
+        }
       }
-      fclose(f_arvore_b);
-      f_arvore_b = NULL;
-    } else {
-      encontrou = search(f_entrada, reg_count, search_for, &filter);
     }
   }
 
-  // Atualiza o número de estações e pares de estações no registro de cabeçalho
-  atualizar_estacoes(f_entrada);
+  // Atualiza a consistência do arquivo nas structs de cabeçalho
+  cab_dados.status = '1';
+  cab_btree.status = '1';
 
-  // Define o arquivo binário como consistente no registro de cabeçalho
-  char status = '1';
-  fseek(f_entrada, 0, SEEK_SET);
-  fwrite(&status, sizeof(char), 1, f_entrada);
+  // Atualiza o número de estações e número de pares de estações usando as
+  // hashtables
+  update_statistics(f_data, &cab_dados);
 
-  // Fecha o arquivo binário e o define como NULL para evitar acessos
-  // indevidos
-  fclose(f_entrada);
-  f_entrada = NULL;
+  // Escreve cabeçalhos no disco
+  data_header_write(f_data, &cab_dados);
+  btree_header_write(f_btree, &cab_btree);
 
-  BinarioNaTela(nome_entrada);
-  BinarioNaTela(nome_arvore_b);
+  // Limpeza de heap e ponteiros
+  fclose(f_data);
+  f_data = NULL;
+  fclose(f_btree);
+  f_btree = NULL;
 
-  // Fecha o arquivo de entrada
-  fclose(f_entrada);
-  f_entrada = NULL;
+  BinarioNaTela(input_filename);
+  BinarioNaTela(btree_filename);
 }
